@@ -10,30 +10,32 @@
 ;;; MÓDULO GRÁFICO - DIBUJO DEL MAPA
 ;;; =====================================================================
 
+(setq modo 1) ; 0: cada casilla de su color, 1: toda la tierra es gris
+
 ;; DIBUJA TODO EL MAPA
 (defun dibuixa-mapa (mapa)
     (cls)                       ; Limpia la pantalla gráfica
-    (dibuixa-files mapa 0 modo)      ; Empieza el ciclo en la fila x=0
+    (dibuixa-files mapa 0)      ; Empieza el ciclo en la fila x=0
 )         
 
 ;; RECORRE LAS FILAS (x)
-(defun dibuixa-files (mapa x modo)
+(defun dibuixa-files (mapa x)
     (cond (  (null mapa) t  )                           ; Si no hay más filas, termina
-        (  t (dibuixa-columnes (car mapa) 0 x modo)     ; Dibuja las columnas de la fila x empezando en 0
-             (dibuixa-files (cdr mapa) (+ x 1) modo))   ; pasamos a la Siguiente fila (x+1)
+        (  t (dibuixa-columnes (car mapa) 0 x)     ; Dibuja las columnas de la fila x empezando en 0
+             (dibuixa-files (cdr mapa) (+ x 1)))   ; pasamos a la Siguiente fila (x+1)
     )
 )
 
 ;; RECORRE LAS COLUMNAS (y)
-(defun dibuixa-columnes (columna y x modo)
+(defun dibuixa-columnes (columna y x)
     (cond (  (null columna) t  )                                    ; Si la columna termina, vuelve atrás
-          (  t (dibuixa-una-casella (car columna) y x modo)         ; Pinta la casilla actual actual
-               (dibuixa-columnes (cdr columna) (+ y 1) x modo)  )   ; Siguiente columna (y+1)
+          (  t (dibuixa-una-casella (car columna) y x)         ; Pinta la casilla actual actual
+               (dibuixa-columnes (cdr columna) (+ y 1) x)  )   ; Siguiente columna (y+1)
     )
 )
 
 ;; PINTA UNA CASILLA DEL TABLERO SEGÚN SU COLOR
-(defun dibuixa-una-casella (casilla x y modo)   
+(defun dibuixa-una-casella (casilla x y)   
     (let* (  (mida 15)               ; Tamaño de cada casilla
             (posx (* x mida))       ; posicion del cuadrado
             (posy (* y mida))  ) 

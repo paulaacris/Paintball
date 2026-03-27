@@ -11,7 +11,6 @@
 ; (load 'tco)    ; https://github.com/antoni-oliver/defun-tco
 
 (setq nom_mapa "paintball/maps/prueba.map")
-(setq modo 1) ; 0: cada casilla de su color, 1: toda la tierra es gris
 
 " CARCAR ARCHIVOS "
 (load 'paintball/grafics)
