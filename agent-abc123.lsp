@@ -6,23 +6,22 @@
 ;; Fitxer de l'agent intel·ligent ABC123.
 ;; <Descripció de les funcions d'aquest fitxer>
 
-;; Documentació d'això...
-(defun agent-abc123 (dades)
-    "Retorna la jugada que realitza l'agent ABC123 en un torn donades les dades de la partida."
-    ; (car dades) = ronda
-    ; (cadr dades) = equip
-    ; etc.
-    ; Exemple: retornam les següents accions:
-    ; 1. Crear una bolla a la posició (2, 3).
-    ; 2. Moure a la posició (4, 5).
-    ; 3. Pintar a la posició (6, 7).
-    ; 4. Escriure a la posició 1 de la memòria compartida el valor 42.
-    ; 5. Escriure a la posició 2 de la memòria compartida el valor (2 3).
-    '((crea-bolla (2 3))
-      (mou (4 5))
-      (pinta (6 7))
-      (escriu-memoria 1 42)
-      (escriu-memoria 2 (2 3)))
+;; FUNCIÓN PRINCIPAL QUE LLAMA EL CONTROLADOR
+(defun agent-xyz999 (dades)
+  ;; 'dades' es una lista con: el mapa visible, tus puntos, tus bolas...
+  ;; Esta función debe devolver una lista de órdenes como:
+  ;; '((crea-bolla (2 3)) (mou (4 5)) (pinta (6 7)))
+)
+
+;; DECIDIR QUÉ HACE CADA BOLA QUE TIENES VIVA
+(defun decidir-accio-bolla (bolla dades)
+  ;; ¿Está cerca de la base enemiga? -> Pinta
+  ;; ¿Está lejos? -> Mou
+)
+
+;; BUSCAR EL CAMINO O EL OBJETIVO MÁS CERCANO
+(defun buscar-objectiu-proper (posicio-actual dades)
+  ;; Aquí es donde usas la distancia euclidiana para saber a dónde ir
 )
 
 

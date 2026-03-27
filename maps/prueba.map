@@ -1,0 +1,7 @@
+(
+    ( (terra r) (terra g) (terra g) (terra r) ) 
+    ( (terra g) (aigua) (terra b) (terra g) ) 
+    ( (terra b) (aigua) (terra r) (terra g) ) 
+    ( (terra b) (terra g) (terra g) (aigua) )  
+    
+)
