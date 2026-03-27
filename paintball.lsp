@@ -6,7 +6,6 @@
 ;; Fitxer del controlador principal.
 ;; <Descripció de les funcions d'aquest fitxer>
 
-
 ;; Necessari per a l'optimització de crides recursives.
 ; (load 'common) ; https://almy.us/files/xl305req.zip
 ; (load 'tco)    ; https://github.com/antoni-oliver/defun-tco
