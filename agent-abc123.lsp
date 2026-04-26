@@ -6,11 +6,18 @@
 ;; Fitxer de l'agent intel·ligent ABC123.
 ;; <Descripció de les funcions d'aquest fitxer>
 
-;; FUNCIÓN PRINCIPAL QUE LLAMA EL CONTROLADOR
-(defun agent-xyz999 (dades)
-  ;; 'dades' es una lista con: el mapa visible, tus puntos, tus bolas...
-  ;; Esta función debe devolver una lista de órdenes como:
-  ;; '((crea-bolla (2 3)) (mou (4 5)) (pinta (6 7)))
+"FUNCIÓN PRINCIPAL QUE LLAMA EL CONTROLADOR"
+(defun agent-xyz999 (visio)
+  (format t "He recibido una vision con ~A casillas~%" (length visio))
+
+  ;; BUSCAMOS SI HAY ALGUNA BOLA EN LA VISIÓN QUE HEMOS RECIBIDO
+  (let ((bolas-vistas (count-if #'(lambda (casilla) (member 'bolla casilla)) visio)))
+    (if (> bolas-vistas 0)
+        (format t "¡OJO! El agente ve ~A bolas en el mapa.~%" bolas-vistas)
+        (format t "El agente no ve ninguna bola todavía.~%")))
+
+  (format t "L'Agente està pensant...\n~%")
+  nil ; de momento no hace ninguna accion
 )
 
 ;; DECIDIR QUÉ HACE CADA BOLA QUE TIENES VIVA

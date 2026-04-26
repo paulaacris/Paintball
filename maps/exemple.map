@@ -1,0 +1,7 @@
+(
+    ((00 terra)       (01 aigua) (02 terra g base e2) (03 terra b) (04 terra)      )
+    ((01 aigua)       (11aigua) (21 terra g)         (31 terra b) (41 terra)      )
+    ((02 terra r lab) (12 terra g) (22 terra)           (32 terra b) (42 terra r lab))
+    ((03 terra)       (13 terra g) (23 terra b)         (33 aigua) (43 aigua)      )
+    ((04 aigua)       (14 terra g) (24 terra b base e1) (34 aigua) (44 terra)      )
+)

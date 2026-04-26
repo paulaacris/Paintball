@@ -1,7 +1,6 @@
 (
     ( (terra r) (terra g) (terra g) (terra r) ) 
-    ( (terra g) (aigua) (terra b) (terra g) ) 
+    ( (terra g) (aigua) (terra b base id e1 ()) (terra g) ) ; añadir colores pintados
     ( (terra b) (aigua) (terra r) (terra g) ) 
-    ( (terra b) (terra g) (terra g) (aigua) )  
-    
+    ( (terra b) (x 0 y 0 terra g bolla e1 (r) r 0 0) (terra g) (aigua) )  
 )

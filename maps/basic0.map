@@ -1,0 +1,7 @@
+(
+    ((terra r)       (terra r) (terra g base e2) (terra b) (aigua)      )
+    ((aigua)       (terra r) (terra g)         (terra b) (aigua)      )
+    ((terra r lab) (terra g) (aigua)           (terra b) (terra r lab))
+    ((aigua)       (terra g) (terra b)         (terra r) (aigua)      )
+    ((aigua)       (terra g) (terra b base e1) (terra r) (terra r)      )
+)
