@@ -25,17 +25,16 @@
 
 "COSAS A CAMBIAR"
 "MIRAR DE CAMBIAR TODOS LOS NTH POR ¿CDR?"
-"LAS BOLAS QUE SE CREAN Y SE ELIMINAN SE TIENEN QUE PONER Y QUITAR DEL MAPA"
 
 " CARCAR ARCHIVOS "
 (load 'paintball/grafics)
 (load 'paintball/agent-abc123)
-; (load 'agent-xyz999)
 
 "====================================================================="
 " SETUP "
 "====================================================================="
-; LEE EL ARCHIVO .MAP Y DEVUELVE EL CONTENIDO
+
+"LEE EL ARCHIVO .MAP Y DEVUELVE EL CONTENIDO"
 (defun carregar-dades-mapa (nom-fitxer)
   (let* ((f (open nom-fitxer))  ; abrimos el fichero 
          (mapa (read f)))       ; leemos el fichero 
@@ -84,6 +83,7 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
 "====================================================================="
 " BUCLE PRINCIPAL DEL JUEGO "
 "====================================================================="
+
 "PUNTO DE ENTRADA, LO QUE ESCRIBES EN LA CONSOLA"
 (defun inici ()
 
@@ -94,7 +94,7 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
             (mapa-convertido (preparar-mapa mapa-fitxer))
             ; ESTADO
             ; creamos el estado inicial del juego 
-            (estat-inicial (list mapa-convertido '(((0 0) e1 r (r)) ((1 1) e2 r (r)) ((19 19) e2 r (r))) 200 200 'e1))
+            (estat-inicial (list mapa-convertido '(((0 0) e1 r (r)) ((10 10) e1 r (r)) ((19 19) e2 r (r))) 200 200 'e1))
           )
 
         ; dibujamos el mapa  
@@ -106,56 +106,169 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
         (read)
 
         ; empezamos a jugar
-        (jugar estat-inicial)
+        (format t "\nCOMENÇA LA PARTIDA!\n~%")
+        (juga-torn estat-inicial)
     )
-)
-
-(defun jugar (estat)
-    (format t "\nCOMENÇA LA PARTIDA!\n~%")
-    (juga-torn estat)
 )
 
 "FUNCIÓN QUE JESTIONA EL FLUJO DE CADA TURNO"
 (defun juga-torn (estat)
-    (let* ( (mapa (nth 0 estat))            ; mapa
-            (unitats (nth 1 estat))         ; lista de bolas
-            (torn-actual (nth 4 estat))     ; turno
+    (let* ( (mapa (car estat))                  ; mapa
+            (unitats (car (cdr estat)))         ; lista de bolas
+            (pintura-e1 (car (cddr estat)))     ; pintura de e1
+            (pintura-e2 (car (cdddr estat)))    ; pintura de e2
+            (torn-actual (car (cddddr estat)))  ; turno
         
+            ; pintura que tiene el equipo de quien es el turno 
+            (pintura-base (cond ((eq torn-actual 'e1) pintura-e1)
+                                        (t pintura-e2)))
+            
+            ; al inicio del turno sumamos 2 de pintura al equipo +1 por laboratorio que tengan
+            (ingresos (+ 2 (comptar-laboratoris torn-actual mapa)))
+            (pintura-total (+ pintura-base ingresos))
+
             ; necesitamos saber la posicion de la base del equipo que juega 
             (casella-base (trobar-base torn-actual mapa))   ; casilla entera de la base
             (pos-base (car casella-base))                   ; coordenadas (x y) de la base
             ; y las bolas que le pertenecen 
             (bolles-propies (filtrar-bolles-equip torn-actual unitats)) ; lista de bolas que pertenecen al equipo (((x y) e1) ((x y) e1))
 
-            ; calculamos que ve el equipo (base + cada bola)
-            (visio-agent (calcula-visio-total pos-base bolles-propies mapa unitats))
+            ; junstamos la base y las bolas en una sola lista 
+            (totes-les-unitats (cons casella-base bolles-propies))
 
-            ; llamamos al agente para que decida lo que hacer (le pasamos solo lo que puede ver)
-            (accions (agent-xyz999 visio-agent))  
-               
+            ; le preguntamos, a cada unidad por separado con su propia vision, lo que quiere hacer
+            (accions (demanar-accions-equip totes-les-unitats mapa pintura-total unitats))
+
+            ; calculamos que ve el equipo (base + cada bola)
+            ;(visio-agent (calcula-visio-total pos-base bolles-propies mapa unitats))
+
+            ; llamamos al agente para que decida lo que hacer (le pasamos solo lo que puede ver, la pintura que le queda y la lista de sus bolas)
+            ;(accions (agent-xyz999 visio-agent pintura-total bolles-propies))   
           ) 
 
         (format t "Torn de ~A. L'agente ha decidit fer: ~A~%" torn-actual accions)
         (format t "Prem una tecla y Enter per aplicar accions i canviar de torn...\n")
         (read) ; El programa se para aquí hasta que escribas algo y pulses Enter
 
-        ; cremaos un estado nuevo con los cambios realizados 
-        "de momento solo cambia el turno"
+        ; aplicamos las acciones y actualizamos el estado 
         (let* ( (siguiente-turno (cond ((eq torn-actual 'e1) 'e2)
                                        (t 'e1))) 
+                (resultado-aplicar-acciones (aplicar-acciones accions unitats pintura-total mapa))
+                
+                (nuevas-unidades (car resultado-aplicar-acciones))
+                (nueva-pintura (car (cdr resultado-aplicar-acciones)))
+
                 (nou-estat (list (nth 0 estat)
-                                 (nth 1 estat)
-                                 (nth 2 estat)
-                                 (nth 3 estat)
+                                 nuevas-unidades
+                                 (cond ( (eq torn-actual 'e1) nueva-pintura ) 
+                                       ( t (nth 2 estat) ))
+                                 (cond ( (eq torn-actual 'e2) nueva-pintura ) 
+                                       ( t (nth 3 estat) ))
                                  siguiente-turno))                    
               )
             
             "SI ALGUIEN HA GANADO SE TIENE QUE PARAR EL JUEGO "
 
             "SI NO SEGUIMOS JUGANDO"
-            ; recursividad
-            (juga-torn nou-estat)
+            (dibuixa-mapa nou-estat)    ; redibujamos el mapa para ver la accion
+            (juga-torn nou-estat)       ; recursividad
         )
+    )
+)
+
+"====================================================================="
+" DEMANAR ACCIONES"
+"====================================================================="
+
+"PIDE ACCIONES A CADA UNIDAD DE LA LISTA Y LAS JUNTA EN UNA UNICA LISTA"
+(defun demanar-accions-equip (unitats-equip mapa pintura unitats-globals)
+    (cond (  (null unitats-equip) nil  )
+          (  t 
+                (let* ( (unidad-actual (car unitats-equip))
+                        (posicion (car unidad-actual))
+
+                        ; necesitamos saber si es la base o una bola porque tienen rangos de vision distintos
+                        (es-base (member 'base unidad-actual))
+                        (rango-vision (cond (es-base base_visio)
+                                            (t bolla_visio)))
+
+                        ; calculamos la vision de solo esta unidad
+                        (visio-bruta (visio-mapa posicion rango-vision mapa))
+                        (visio-neta (insertar-bolles-en-visio visio-bruta unitats-globals))
+
+                        ; llamamos al agente diciendole quien es, que ve y cuanta pintura tiene
+                        (accions-unidad (agent-xyz999 unidad-actual visio-neta pintura))
+                      )
+                    
+                    ; juntamos las acciones de esta unidad con las que devuelvan las demas 
+                    (append accions-unidad
+                            (demanar-accions-equip (cdr unitats-equip) mapa pintura unitats-globals))
+                )  )
+    )
+)
+
+"====================================================================="
+" APLICAR ACCIONES"
+"====================================================================="
+
+"ACTUALIZA LA POSICION DE UNA BOLA EN LA LISTA DE UNIDADES"
+(defun actualizar-posicio-bola (pos-antigua pos-nueva unitats)
+    (cond ( (null unitats) nil )
+          ; si la posicion coincide con la de la unidad actual 
+          ( (equal pos-antigua (caar unitats))  
+            ; creamos una unidad nueva con la pos-nueva y mantenemos el resto de datos de la unidad iguales
+            (cons (append (list pos-nueva) (cdr (car unitats)))
+                  (cdr unitats)) )
+          ; si no es esta bola la dejamos como estaba y seguimos mirando
+          ( t (cons (car unitats)
+                    (actualizar-posicio-bola pos-antigua pos-nueva (cdr unitats))) )
+    )
+)
+
+"EJECUTA LAS ORDENES DEL AGENTE Y DEVUELVE LA LISTA DE UNIDADES ACTUALIZADA"
+(defun aplicar-acciones (accions unidades pintura mapa)
+    (cond ( (null accions) (list unidades pintura) )    ; cuando ya heyamos mirado todas las acciones devolvemos la lista de unidades (ya estaran actualizadas) y la pintura (en segun que acciones va cambiando)
+          ( t (let* ( (accio (car accions))             ; cogemos la primera accion de la lista (mou (7 7) (7 8))
+                      (tipo (car accio))                ; tipo de accion (mou)
+                      (params (cdr accio))              ; ((7 7) (7 8))
+                    )
+                (cond ( (and (eq tipo 'mou)                                                     ; si la accion es mover una bola
+                             (<= (dist-sq (car params) (car (cdr params))) bolla_moviment)                     ; la distancia a la que se quiere mover esta permitida
+                             (not (member 'aigua (trobar-casella (car (cdr params)) mapa))))    ; y no se quiere mover encima de una casilla que sea agua
+                        ; si todo es legal
+                        ; calculamos la nueva lista de unidades tras el movimiento
+                        (let ( (nueva-lista (actualizar-posicio-bola (car params) (car (cdr params)) unidades))
+                             )
+                            ; aplicamos la siguiente accion
+                            (aplicar-acciones (cdr accions) nueva-lista pintura mapa)
+                        ) )
+                      ;"SI LA ACCION NO ES LEGAL O NO ES DE TIPO 'MOU POR AHORA LA IGNORAMOS"
+                      ( t (aplicar-acciones (cdr accions) unidades pintura mapa ) )
+                )
+              ) )
+    )
+)
+
+"====================================================================="
+" COMPROBAR ACCIONES LEGALES"
+"====================================================================="
+
+"BUSCA UNA CASILLA EN EL MAPA A PARTIR DE SUS COORDENADAS"
+(defun trobar-casella (coordenadas mapa)
+    (cond (  (null mapa) nil  )
+          ; si encuentra algo lo devuelve 
+          (  (trobar-casella-fila coordenadas (car mapa))  )
+          ; si no busca en la siguiente fila
+          (  t (trobar-casella coordenadas (cdr mapa))  )
+    )
+)
+
+(defun trobar-casella-fila (coordenadas fila)
+    (cond (  (null fila) nil  )
+          ; si las coordenadas son iguales devolvemos la casilla entera
+          (  (equal coordenadas (caar fila)) (car fila)  )
+          ; si no miramos la siguiente casilla de la fila
+          (  t (trobar-casella-fila coordenadas (cdr fila))  )
     )
 )
 
@@ -303,5 +416,28 @@ LE TENEMOS QUE INSERTAR LA POSICION DE LAS BOLAS QUE PUEDE VER
              (cons (car unitats) (filtrar-bolles-equip equip (cdr unitats)))  )
           ; si no, la descartamos y miramos el resto de bolas
           (  t (filtrar-bolles-equip equip (cdr unitats))  )
+    )
+)
+
+"====================================================================="
+" LABORATORIS "
+"====================================================================="
+
+"CUENTA CUANTOS LABORATORIOS TIENE UN EQUIPO EN EL MAPA"
+(defun comptar-laboratoris (equip mapa)
+    (cond (  (null mapa) 0  )
+          (  t (+ (comptar-labs-fila equip (car mapa))
+                  (comptar-laboratoris equip (cdr mapa)))  )
+    )
+)
+
+"CUENTA LOS LABORATORIOS DE UN EQUIPO EN UNA FILA"
+(defun comptar-labs-fila (equip fila)
+    (cond (  (null fila) 0  )
+          ; si la casilla es un lab y es del equipo se suma 1
+          (  (and (member 'lab (car fila)) (member equip (car fila)))
+             (+ 1 (comptar-labs-fila equip (cdr fila)))  )
+          ; si no no sumamos y seguimos mirando la fila
+          (  t (comptar-labs-fila equip (cdr fila)))
     )
 )
