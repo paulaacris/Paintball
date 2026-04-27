@@ -30,25 +30,108 @@
 "LÓGICA DEL AGENTE"
 "
   BASE
-    si pintura >=50 -> creamos una bola de un color aleatorio
+    si pintura >50 -> creamos una bola del color que menos tengamos, si todas iguales aleatorio
     si ve la base enemiga (y no hay ninguna bola ya encima) la crea lo mas cerca de la base posible (lo que deje el rango)
   
   BOLLA
-    si hay <20 de pintura 
-      si puedes le disparas a un laboratorio que no sea tuyo de antes
-      si solo lo ves te mueves hacia el 
     si la bola ve la base enemiga y no esta pintada del color del que puede s¡disparar la bola
       si estan a distanci ade tiro disparan 
       si no se mueve hacia ella 
+    si hay <20 de pintura 
+      si puedes le disparas a un laboratorio que no sea tuyo de antes
+      si solo lo ves te mueves hacia el 
     si no ve la base se mueve siempre en una direccion, si llega al borde cambia de direccion 
 "
 
-
 "FUNCIÓN PRINCIPAL QUE LLAMA EL CONTROLADOR"
 (defun agent-xyz999 (mi-unidad mi-visio pintura)
-  
-  (format t "-> Soy la unidad en la posicion ~A y veo ~A casillas~%" (car mi-unidad) (length mi-visio))
+  (let* ( (es-base (member 'base mi-unidad)) )
+    (cond ( es-base 
+            nil ) ; Si es base, de momento no hace nada (evita el error)
+          ( t 
+            (decidir-bolla mi-unidad mi-visio pintura) ) ; Si es bola, se mueve
+    )
+  ) 
+)
 
-  ; Dejamos la acción falsa de momento para que el controlador no de error
-  (list '(mou (10 10) (10 11)))
+"====================================================================="
+" LOGICA BASE"
+"====================================================================="
+
+"DECIDE QUE ACCION VA A HACER LA BASE"
+"(defun decidir-base (pos-actual mi-visio pintura)
+  ; si tenemos >= 50 de pintura creamos una bola
+  (cond (  (> pintura 50) 
+            pos cambiar
+            que el color vaya cambiando
+           (list (list 'crear-bolla 'r pos))  ) ; devolvemos la accion de crear
+        (  t nil  ) ; si no hay pintura no hacemos nada 
+  )
+)
+"
+"====================================================================="
+" LOGICA BOLA"
+"====================================================================="
+
+"DECIDE QUE ACCION VA A HACER LA BOLA"
+(defun decidir-bolla (mi-unidad mi-visio pintura)
+  (let* ( (pos-actual (car mi-unidad))
+          (x-actual (car pos-actual))
+          (y-actual (car (cdr pos-actual)))
+          (objetivo '(0 0)) 
+
+          ; TRES OPCIONES DE MOVIMIENTO
+          ; movemos x y 
+          (pos-diag (aproxima-posicio pos-actual objetivo))
+          ; movemos solo x
+          (pos-x (list (calcular-paso x-actual (car objetivo)) y-actual))
+          ; movemos solo y
+          (pos-y (list x-actual (calcular-paso y-actual (car (cdr objetivo)))))
+        )
+    (cond ; si la posicion a la que nos queriamos mover es caminable 
+          (  (es-caminable pos-diag mi-visio)
+             (list (list 'mou pos-actual pos-diag))  )
+          ; si la posicion anterior no es caminable intentamos mover solo la x 
+          (  (es-caminable pos-x mi-visio)
+             (list (list 'mou pos-actual pos-x))  )
+          ; si la posicion anterior no es caminable intentamos mover solo la y 
+          (  (es-caminable pos-y mi-visio)
+             (list (list 'mou pos-actual pos-y))  )
+    )
+  )
+)
+
+"CALCULA LA SIGUIENTE COORDENADA A LA QUE TIENES QUE MOVERTE PARA ACERCARTE AL OBJETIVO"
+; la bola solo se mueve, como máximo, una casilla en direccion x y una casilla en direccion y
+(defun calcular-paso (actual objetivo)
+  (cond ; si ya estamos en el sitio no nos movemos 
+        ( (= actual objetivo) actual )
+        ; si xa > xo nos movemos uno a la izquierda (restamos)
+        ( (> actual objetivo) (- actual 1) )
+        ; si xa < xo nos movemos uno a la derecha (sumamos)
+        ( t (+ actual 1) )
+  )
+)
+
+"GENERA LA NUEVA POSICIÓN (X Y) HACIA UN OBJETIVO"
+(defun aproxima-posicio (p-act p-obj)
+  (let* ( (x-act (car p-act))
+          (y-act (cadr p-act))
+          (x-obj (car p-obj))
+          (y-obj (cadr p-obj))
+        )
+    (list (calcular-paso x-act x-obj)
+          (calcular-paso y-act y-obj))
+  )
+)
+
+"COMPRUEBA SI UNA CASILLA ES CAMINABLE (No es agua)"
+(defun es-caminable (pos visio)
+  (let ((casilla (trobar-casella-fila pos visio)))
+    (cond ( (null casilla) nil ) ; Si no la vemos no vamos
+          ( (member 'aigua casilla) nil ) ; Si es agua, no podemos
+          ( (member 'bolla casilla) nil ) ; Si ya hay otra bola, no podemos
+          ( t t ) ; En cualquier otro caso (tierra o base), se puede pasar
+    )
+  )
 )

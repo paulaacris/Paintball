@@ -94,7 +94,7 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
             (mapa-convertido (preparar-mapa mapa-fitxer))
             ; ESTADO
             ; creamos el estado inicial del juego 
-            (estat-inicial (list mapa-convertido '(((0 0) e1 r (r)) ((10 10) e1 r (r)) ((19 19) e2 r (r))) 200 200 'e1))
+            (estat-inicial (list mapa-convertido '(((3 1) e1 r (r)) ((10 10) e1 r (r)) ((19 19) e2 r (r))) 200 200 'e1))
           )
 
         ; dibujamos el mapa  
