@@ -17,9 +17,12 @@
 (setq bolla_visio 20)
 (setq base_visio 64)
 
+"CAMBIOS"
+"en aplicar_acciones mov ahora esta puesto que tr siempre sume 1, hacer que si es diagonal sumer 1.42"
+
 ; ESTADO
 ; (mapa unitats pintura-e1 pintura-e2 turno)
-    ; unitats: todas las bolas activas del juego ((x y) equipo color (colores pintada))
+    ; unitats: todas las bolas activas del juego ((x y) equipo color (colores pintada) tr-moure tr-pintar)
     ; pintura: numero del 0 all 200
     ; torn: e1 / e2
 
@@ -94,7 +97,7 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
             (mapa-convertido (preparar-mapa mapa-fitxer))
             ; ESTADO
             ; creamos el estado inicial del juego 
-            (estat-inicial (list mapa-convertido '(((15 4) e1 r (r g b)) ((10 10) e1 r (r)) ((12 10) e2 r (r))) 200 200 'e1))
+            (estat-inicial (list mapa-convertido '(((15 4) e1 r (r g b) 0 0) ((10 10) e1 r (r) 0 0) ((12 10) e2 r (r) 0 0)) 200 200 'e1))
           )
 
         ; dibujamos el mapa  
@@ -114,10 +117,14 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
 "FUNCIÓN QUE JESTIONA EL FLUJO DE CADA TURNO"
 (defun juga-torn (estat)
     (let* ( (mapa (car estat))                  ; mapa
-            (unitats (car (cdr estat)))         ; lista de bolas
+            (unitats-velles (car (cdr estat)))  ; lista de bolas (a estas les falta actualizar tr)
             (pintura-e1 (car (cddr estat)))     ; pintura de e1
             (pintura-e2 (car (cdddr estat)))    ; pintura de e2
             (torn-actual (car (cddddr estat)))  ; turno
+
+            ; actualizamos los tiempos de recuperacion 
+            ;(se le resta 1 a todos los tiempos de todas las bolas)
+            (unitats (actualitzar-temps-recuperacio unitats-velles))
         
             ; pintura que tiene el equipo de quien es el turno 
             (pintura-base (cond ((eq torn-actual 'e1) pintura-e1)
@@ -138,15 +145,11 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
 
             ; le preguntamos, a cada unidad por separado con su propia vision, lo que quiere hacer
             (accions (demanar-accions-equip totes-les-unitats mapa pintura-total unitats))
-
-            ; calculamos que ve el equipo (base + cada bola)
-            ;(visio-agent (calcula-visio-total pos-base bolles-propies mapa unitats))
-
-            ; llamamos al agente para que decida lo que hacer (le pasamos solo lo que puede ver, la pintura que le queda y la lista de sus bolas)
-            ;(accions (agent-xyz999 visio-agent pintura-total bolles-propies))   
           ) 
 
         (format t "Torn de ~A. L'agente ha decidit fer: ~A~%" torn-actual accions)
+        (format t "ESTADO DE MIS BOLAS (pos equipo color pintura tr-moure tr-pinta):~%")
+        (format t " ~A ~%" bolles-propies) 
         (format t "Prem una tecla y Enter per aplicar accions i canviar de torn...\n")
         (read) ; El programa se para aquí hasta que escribas algo y pulses Enter
 
@@ -173,6 +176,27 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
             (dibuixa-mapa nou-estat)    ; redibujamos el mapa para ver la accion
             (juga-torn nou-estat)       ; recursividad
         )
+    )
+)
+
+"BAJA TODOS LOS TIEMPOS DE RECUPERACIÓN AL EMPEZAR EL TURNO"
+(defun actualitzar-temps-recuperacio (unitats)
+    (cond ((null unitats) nil)
+          (t (let* ((unitat (car unitats))
+                    (pos (nth 0 unitat))
+                    (equipo (nth 1 unitat))
+                    (color (nth 2 unitat))
+                    (color-pintada (nth 3 unitat))
+                    (tr-moure (nth 4 unitat))
+                    (tr-pintar (nth 5 unitat))
+
+                    ; creamos una nueva bola con los tiempos restados
+                    (nueva-unidad (list pos equipo color color-pintada
+                                (max 0 (- tr-moure 1))
+                                (max 0 (- tr-pintar 1))))
+                   )
+                (cons nueva-unidad (actualitzar-temps-recuperacio (cdr unitats)))
+             ))
     )
 )
 
@@ -225,27 +249,75 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
     )
 )
 
+"unidades: lista de todas las unidades 
+funcion que sustituye la unidad que tiene las coordenadas (coordenadas) por bola (unidad completa)"
+(defun actualizar-lista-unidades (coordenadas bola unidades)
+    (cond (  (null unidades) nil  )
+          ; si encontramos la bola que queremos cambiar 
+          (  (eq (caar unidades) coordenadas)
+             (cons bola (cdr unidades))  )
+          ; si no es esta lo dejamos igual y seguimos miranod
+          (  t (cons (car unidades) (actualizar-lista-unidades coordenadas bola (cdr unidades))))
+    )
+)
+
 "EJECUTA LAS ORDENES DEL AGENTE Y DEVUELVE LA LISTA DE UNIDADES ACTUALIZADA"
 (defun aplicar-acciones (accions unidades pintura mapa)
     (cond ( (null accions) (list unidades pintura) )    ; cuando ya heyamos mirado todas las acciones devolvemos la lista de unidades (ya estaran actualizadas) y la pintura (en segun que acciones va cambiando)
           ( t (let* ( (accio (car accions))             ; cogemos la primera accion de la lista (mou (7 7) (7 8))
                       (tipo (car accio))                ; tipo de accion (mou)
                       (params (cdr accio))              ; ((7 7) (7 8))
+                      ; buscamos la bola (por sus coordenadas) a la que le queremos aplicar la accion
+                      (bola (buscar-unidad (car params) unidades)) ; unidad completa
                     )
-                (cond ( (and (eq tipo 'mou)                                                     ; si la accion es mover una bola
-                             (<= (dist-sq (car params) (car (cdr params))) bolla_moviment)                     ; la distancia a la que se quiere mover esta permitida
+                (cond ; -- ACCION MOU --
+                      ( (and (eq tipo 'mou)                                                     ; si la accion es mover una bola
+                             (< (nth 4 bola) 1)                                                 ; si el tiempo de recuperacion es < 1
+                             (<= (dist-sq (car params) (car (cdr params))) bolla_moviment)      ; la distancia a la que se quiere mover esta permitida
                              (not (member 'aigua (trobar-casella (car (cdr params)) mapa))))    ; y no se quiere mover encima de una casilla que sea agua
-                        ; si todo es legal
-                        ; calculamos la nueva lista de unidades tras el movimiento
-                        (let ( (nueva-lista (actualizar-posicio-bola (car params) (car (cdr params)) unidades))
-                             )
-                            ; aplicamos la siguiente accion
+                        ; SI TODO ES LEGAL
+                        (let* ( (incremento (cond ( (es-diagonal (car params) (car (cdr params))) 1.42)
+                                                  ( t 1)))
+                                ; actualizamos la bola con 
+                                (bola-actualizada (list (cadr params)       ; nueva pos
+                                                        (nth 1 bola)        ; equipo
+                                                        (nth 2 bola)        ; colro
+                                                        (nth 3 bola)        ; colores pintada
+                                                        (+ (nth 4 bola) incremento)  ; tr_moure + 1
+                                                        (nth 5 bola)))      ; tr_pintar igual
+                              
+                                ; sustituimos la bola vieja por la nueva
+                                (nueva-lista (actualizar-lista-unidades (car params) bola-actualizada unidades))
+                              )
+                            ; seguimos con el resto de acciones
                             (aplicar-acciones (cdr accions) nueva-lista pintura mapa)
-                        ) )
-                      ;"SI LA ACCION NO ES LEGAL O NO ES DE TIPO 'MOU POR AHORA LA IGNORAMOS"
+                        ))
+                        
+                      ; SI LA ACCION NO ES LEGAL O NO ES DEl TIPO LA IGNORAMOS
                       ( t (aplicar-acciones (cdr accions) unidades pintura mapa ) )
                 )
-              ) )
+              ) 
+          )
+    )
+)
+
+(defun buscar-unidad (pos unidades)
+    (cond (  (null unidades) nil  )
+          (  (eq pos (caar unidades)) (car unidades)  )
+          (  t (buscar-unidad pos (cdr unidades))  )
+    )
+)
+
+(defun es-diagonal (pos1 pos2)
+    (let ( (x1 (car pos1))
+           (x2 (car (cdr pos1)))
+           (y1 (car pos2))
+           (y2 (car (cdr pos2)))
+         )
+        
+        ; es diagonal si cambian la x y la y a la vez
+        (and (not (= x1 x2))
+             (not (= y1 y2)))
     )
 )
 
