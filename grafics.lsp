@@ -18,6 +18,15 @@
 "EN 0 NO PINTA BIEN EL COLOR DEL SUELO SI LA BASE ESTA PINTADA DE ALGUN COLOR"
 (setq modo 1) ; 0: cada casilla de su color, 1: toda la tierra es gris
 
+"ELIGE EL COLOR DE LA BINTURA/BOLA"
+(defun aplicar-color (c)
+  (cond ( (eq c 'r) (color 222 98 98) )   ; rojo
+        ( (eq c 'g) (color 145 213 109) ) ; verde
+        ( (eq c 'b) (color 12 177 199) )  ; azul
+        ( t (color 0 0 0) )               ; negro por defecto
+  )
+)
+
 "DIBUJA TODO EL MAPA"
 (defun dibuixa-mapa (estat)
     (let ( (mapa (car estat))
@@ -27,8 +36,7 @@
         (cls)                           ; Limpia la pantalla gráfica
         (dibuixa-files (reverse mapa))  ; Dibuja el mapa (con reverse para que no lo dibuje al reves)
         (dibuixa-bolles unitats)        ; pintamos las bolas actuales encima del mapa
-    )
-    
+    ) 
 ) 
 
 "RECORRE LA LISTA DE UNIDADES Y LAS PINTA"
@@ -39,12 +47,13 @@
     )
 )
 
-"PINTA UN CIRCULO O CUADRADO PARA LA BOLA"
+"PINTA UN CIRCULO PARA LA BOLA"
 (defun dibuixa-una-bolla (unitat)
     (let* ( ; sacamos los datos que necesitamos de la unidad 
             (pos (car unitat))
             (color-bola (nth 2 unitat))
-            (torn (car (cdr unitat)))
+            (torn (nth 1 unitat))
+            (colores-pintada (nth 3 unitat))
 
             (mitat (round (/ mida 2))) ; redondeamos porque como la division 15/2 no es entera luego da error al dibujar
             ; los circulos se empiezan a pintar des del centro de la casilla
@@ -56,26 +65,35 @@
           )
         
         ; elegimos el color de la bola 
-        (cond (  (eq color-bola 'r) (color 222 98 98)  )    ; rojo
-              (  (eq color-bola 'g) (color 145 213 109)  )  ; verde
-              (  (eq color-bola 'b) (color 12 177 199)  )   ; azul
-              (  t (color 0 0 0)  )                         ; negro por defecto
-        )
+        (aplicar-color color-bola)
         
-        ; dibujamos la bola (circulo)
-        (cercle-ple centro-x centro-y radio 20) ; con 20 segmentos ya parece un círculo
-        
+        ; dibujamos la bola (circulo) con las manchas
+        (dibuixa-manxes colores-pintada centro-x centro-y radio)
+
         ; elegimos el color del contorno de la bola 
         (cond (  (eq torn 'e1) (color 0 0 0)  )        
               (  (eq torn 'e2) (color 255 255 255)  ) 
         )
 
         ; dibujamos el contorno de la bola para saber de que equipo es 
-        (cercle centro-x centro-y radio 20)
-        (cercle centro-x centro-y (- radio 1) 20)
+        (cercle centro-x centro-y (+ radio 2) 20)
+        (cercle centro-x centro-y (+ radio 1) 20)
 
         (color 0 0 0) ; volvemos al negro 
     )
+)
+
+"PINTA CIRCULOS CONCENTRICOS PARA LAS MANCHAS DE PINTURA"
+(defun dibuixa-manxes (llista-colors x y radi)
+  (cond ( (null llista-colors) t ) ; Si no hay más colores, terminamos
+        ( (<= radi 0) t )          ; Si el radio es 0 o menos, no cabe nada más
+        ( t 
+          (aplicar-color (car llista-colors))    ; Ponemos el color actual
+          (cercle-ple x y radi 20)               ; Dibujamos el círculo
+          ; Llamada recursiva con el siguiente color y un radio más pequeño
+          (dibuixa-manxes (cdr llista-colors) x y (- radi 2)) 
+        )
+  )
 )
 
 "RECORRE LAS FILAS PARA DIBUJAR CADA CASILLA"

@@ -84,7 +84,6 @@
                            (t 'e2)))
 
           ; SELECCIONAR OBJETIVO
-          ;(objetivo '(0 0))
           (obj (cercar-objetiu-enemic meu-equip mi-visio))
           (objetivo (cond ( obj obj )   ; si hay objetivo vamos hacia el
                           ( t '(10 10) )))  ; 3. Si no, va hacia el centro del mapa 
@@ -96,7 +95,7 @@
           (pos-x (list (calcular-paso x-actual (car objetivo)) y-actual))
           ; movemos solo y
           (pos-y (list x-actual (calcular-paso y-actual (car (cdr objetivo)))))
-        ) (break "asd")
+        ) 
 
     ; CONDICION DE MOVIMIENTO    
     (cond ; PRIORIDAD 1: si podemos pintamos
@@ -113,16 +112,7 @@
           ; Esto evita que la bola se quede "muerta" si hay un obstáculo delante.
           ( t (list (list 'mou pos-actual (list (+ x-actual 1) y-actual))))
     ) 
-    ;(cond ; si la posicion a la que nos queriamos mover es caminable 
-     ;     (  (es-caminable pos-diag mi-visio)
-      ;       (list (list 'mou pos-actual pos-diag))  )
-          ; si la posicion anterior no es caminable intentamos mover solo la x 
-       ;   (  (es-caminable pos-x mi-visio)
-        ;     (list (list 'mou pos-actual pos-x))  )
-          ; si la posicion anterior no es caminable intentamos mover solo la y 
-         ; (  (es-caminable pos-y mi-visio)
-          ;   (list (list 'mou pos-actual pos-y))  )
-    )
+  )
 )
 
 
@@ -162,6 +152,25 @@
   )
 )
 
+"BUSCA UN ELEMENTO ESPECÍFICO EN LA VISIÓN QUE NO SEA DE MI EQUIPO"
+(defun cercar-element-enemic (element meu-equip visio)
+  (cond ( (null visio) nil )
+        ( t
+          (let* ( (casilla (car visio))
+                  (pos (car casilla))
+                  ; Comprobamos si está el elemento (base, lab o bolla) 
+                  ; y que NO esté la etiqueta de nuestro equipo en la casilla
+                  (es-objectiu (and (member element casilla) 
+                                    (not (member meu-equip casilla))))
+                )
+            (cond ( es-objectiu pos ) ; Si lo encuentra, devuelve la posición
+                  ( t (cercar-element-enemic element meu-equip (cdr visio)) ) ; Si no, sigue mirando
+            )
+          )
+        )
+  )
+)
+
 "BUSCA UNA CASILLA POR SU CONTENIDO (base, lab, bolla)"
 (defun cercar-en-visio (objectiu visio)
   (cond (  (null visio) nil  )
@@ -173,27 +182,10 @@
   )
 )
 
-"BUSCA UNA CASILLA POR SU CONTENIDO Y QUE NO SEA DE MI EQUIPO"
-;mal 
+"BUSCA POR PRIORIDAD: 1. Base, 2. Lab, 3. Bolla"
+"BUSCA POR PRIORIDAD (VERSIÓN REDUCIDA CON OR)"
 (defun cercar-objetiu-enemic (meu-equip visio)
-  (cond ( (null visio) nil )
-        ( t 
-          (let* ( (casilla (car visio))
-                  (pos (car casilla))
-                  ; Buscamos en la lista de la casilla si está el nombre de un equipo
-                  ; que NO sea el nuestro.
-                  (es-base-enemiga (and (member 'base casilla) 
-                                        (not (member meu-equip casilla))))
-                  (es-lab-libre (and (member 'lab casilla) 
-                                     (not (member meu-equip casilla))))
-                )
-                ; asi es lo primero que encuentra 
-                ; mirar que ese cerca 
-            (cond ( es-base-enemiga pos ) ; preferencia 1 - base 
-                  ( es-lab-libre pos )    ; preferencia 2 - lab 
-                  ( t (cercar-objetiu-enemic meu-equip (cdr visio)) )
-            )
-          )
-        )
-  )
+  (or (cercar-element-enemic 'base meu-equip visio)   ; Busca base primero
+      (cercar-element-enemic 'lab meu-equip visio)    ; Si falla, busca lab
+      (cercar-element-enemic 'bolla meu-equip visio)) ; Si falla, busca bola
 )
