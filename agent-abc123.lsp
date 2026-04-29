@@ -48,9 +48,10 @@
 (defun agent-xyz999 (mi-unidad mi-visio pintura)
   (let* ( (es-base (member 'base mi-unidad)) )
     (cond ( es-base 
-            nil ) ; Si es base, de momento no hace nada (evita el error)
+            nil)
+            ;(decidir-base mi-unidad mi-visio pintura) ) ; Si es base
           ( t 
-            (decidir-bolla mi-unidad mi-visio pintura) ) ; Si es bola, se mueve
+            (decidir-bolla mi-unidad mi-visio) ) ; Si es bola
     )
   ) 
 )
@@ -60,61 +61,109 @@
 "====================================================================="
 
 "DECIDE QUE ACCION VA A HACER LA BASE"
-"(defun decidir-base (pos-actual mi-visio pintura)
+(defun decidir-base (mi-unidad mi-visio pintura)
   ; si tenemos >= 50 de pintura creamos una bola
-  (cond (  (> pintura 50) 
-            pos cambiar
-            que el color vaya cambiando
-           (list (list 'crear-bolla 'r pos))  ) ; devolvemos la accion de crear
-        (  t nil  ) ; si no hay pintura no hacemos nada 
+  (let* ( (pos-actual (car mi-unidad)) ) ; coordenadas (x y) de la base
+    (cond (  (>= pintura 50)  
+          ; creamos una bola roja justo en la posicion de la base
+          (list (list 'crear-bolla 'r pos-actual)) )
+          (  t nil  ) ; si no hay suficiente pintura no hacemos nada
+    )
   )
 )
-"
+
 "====================================================================="
 " LOGICA BOLA"
 "====================================================================="
 
 "DECIDE QUE ACCION VA A HACER LA BOLA"
-(defun decidir-bolla (mi-unidad mi-visio pintura)
+(defun decidir-bolla (mi-unidad mi-visio)
   (let* ( (pos-actual (car mi-unidad))
           (x-actual (car pos-actual))
           (y-actual (car (cdr pos-actual)))
 
-          (meu-equip (cond ((member 'e1 mi-unidad) 'e1)
-                           (t 'e2)))
+          (meu-equip (nth 1 mi-unidad))
 
-          ; SELECCIONAR OBJETIVO
-          (obj (cercar-objetiu-enemic meu-equip mi-visio))
-          (objetivo (cond ( obj obj )   ; si hay objetivo vamos hacia el
-                          ( t '(10 10) )))  ; 3. Si no, va hacia el centro del mapa 
-        
-          ; TRES OPCIONES DE MOVIMIENTO
-          ; movemos x y 
-          (pos-diag (aproxima-posicio pos-actual objetivo))
-          ; movemos solo x
-          (pos-x (list (calcular-paso x-actual (car objetivo)) y-actual))
-          ; movemos solo y
-          (pos-y (list x-actual (calcular-paso y-actual (car (cdr objetivo)))))
+          (tr-moure (nth 4 mi-unidad))
+          (tr-pintar (nth 5 mi-unidad))
+
+          ; seleccionar objetivo 
+          (objetivo (cercar-objetiu-enemic meu-equip mi-visio))
         ) 
 
-    ; CONDICION DE MOVIMIENTO    
-    (cond ; PRIORIDAD 1: si podemos pintamos
-          ;(  (<= (dist-sq objetivo pos-actual) bolla_pintar) (list (list 'pintar objetivo))  )  
-          ; PRIORIDAD 2: moverse 
-          (  (es-caminable pos-diag mi-visio)
-             (list (list 'mou pos-actual pos-diag))  )  
-          (  (es-caminable pos-x mi-visio)
-             (list (list 'mou pos-actual pos-x))  )
-          (  (es-caminable pos-y mi-visio)
-             (list (list 'mou pos-actual pos-y))  )
-          
-          ; PRIORIDAD 3: SI TODO FALLA, MOVIMIENTO ALEATORIO O ESPERAR
-          ; Esto evita que la bola se quede "muerta" si hay un obstáculo delante.
-          ( t (list (list 'mou pos-actual (list (+ x-actual 1) y-actual))))
-    ) 
+    (append (decidir-pintar pos-actual objetivo tr-pintar mi-visio)
+            (decidir-moure pos-actual objetivo tr-moure mi-visio))
   )
 )
 
+"====================================================================="
+" DECISIÓN DE PINTAR"
+"====================================================================="
+
+; decide si la bola puede y tiene que disparar 
+; condiciones para pintar:
+; 1: tr-pintar < 1
+; 2: hay un objetivo visible 
+; 3: el objetivo esta a tiro
+
+(defun decidir-pintar (pos-actual objetivo tr-pintar mi-visio)
+  (cond (  (>= tr-pintar 1) nil  ) ; aun en recuperación, no puede disparar
+        (  (null objetivo) nil  ) ; no vemos ningun objetivo
+        (  (> (dist-sq pos-actual objetivo) bolla_pintar) nil  ) ; el objetivo esta fuera del rango de disparo
+        ; se puede disparar
+        (  t (list (list 'pinta pos-actual objetivo)))
+  )
+)
+
+"====================================================================="
+" DECISIÓN DE MOVERSE"
+"====================================================================="
+
+; DECIDE HACIA DONDE MOVERSE 
+; CONDICIONES PARA MODERSE:
+; 1: tr-moure < 1
+; ESTRATEGIA DE MOVIMIENTO:
+; - si hay un objetivo nos acercamos a el (primero diagonal, luego solo x, luego solo y)
+; - si no hya objetivo vamos al centro del mapa (10 10)
+; - si ninguna de las tres posiciones es caminable, intentamos movernos +1 en x 
+
+(defun decidir-moure (pos-actual objetivo tr-moure mi-visio)
+  (cond (  (>= tr-moure 1) nil  ) ; aun en recuperacion
+        (  t 
+            (let* ( (x-actual (car pos-actual))
+                    (y-actual (car (cdr pos-actual)))
+                  
+              
+                    ; si no hay objetivo enemigo visible nos movemos al centro del mapa
+                    (destino (cond (objetivo objetivo)
+                                  (t '(10 10) )))
+
+                    ; calculamos las tres opciones de movimiento hacia el destino
+                    (pos-diag (aproxima-posicio pos-actual destino))                ; diagonal (mueve x e y a la vez)
+                    (pos-x (list (calcular-paso x-actual (car destino)) y-actual))  ; solo mueve x
+                    (pos-y (list x-actual (calcular-paso y-actual (cadr destino)))) ; solo mueve y
+                    (pos-fall (list (+ x-actual 1) y-actual))                       ; fallback: +1 en x
+                  )
+
+              (cond ( (es-caminable pos-diag mi-visio)
+                      (list (list 'mou pos-actual pos-diag)) )  ; opción preferida: acercarse en diagonal
+                    ( (es-caminable pos-x mi-visio)
+                      (list (list 'mou pos-actual pos-x)) )     ; segunda opción: solo x
+                    ( (es-caminable pos-y mi-visio)
+                      (list (list 'mou pos-actual pos-y)) )     ; tercera opción: solo y
+                    ( t
+                      (list (list 'mou pos-actual pos-fall)) )  ; último recurso
+              )
+
+            )
+        )
+  )
+)
+
+
+"====================================================================="
+" AUXILIARES"
+"====================================================================="
 
 "CALCULA LA SIGUIENTE COORDENADA A LA QUE TIENES QUE MOVERTE PARA ACERCARTE AL OBJETIVO"
 ; la bola solo se mueve, como máximo, una casilla en direccion x y una casilla en direccion y
@@ -146,8 +195,9 @@
     (cond ( (null casilla) nil ) ; Si no la vemos no vamos
           ( (member 'aigua casilla) nil ) ; Si es agua, no podemos
           ( (member 'bolla casilla) nil ) ; Si ya hay otra bola, no podemos
-          ;"si no es base, si no es lab"
-          ( t t ) ; En cualquier otro caso (tierra o base), se puede pasar
+          ( (member 'base casilla) nil ) ; Si es base, no podemos
+          ( (member 'lab casilla) nil ) ; Si es lab, no podemos
+          ( t t ) ; En cualquier otro caso se puede pasar
     )
   )
 )
@@ -168,17 +218,6 @@
             )
           )
         )
-  )
-)
-
-"BUSCA UNA CASILLA POR SU CONTENIDO (base, lab, bolla)"
-(defun cercar-en-visio (objectiu visio)
-  (cond (  (null visio) nil  )
-        ; si la casilla que estamos mirando es del tipo objetivo
-        ; devolvemos las coordenadas de esa casilla 
-        (  (member 'objectiu (car visio)) (car (car visio))  )
-        ; si no pasamos a mirar las siguientes casillas 
-        (  t (cercar-en-visio objectiu (cdr visio))  )
   )
 )
 

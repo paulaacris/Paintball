@@ -143,6 +143,16 @@
             ((member 'base casilla)
                 (quadrat_ple mida posx posy)
 
+                ; dibujar los colores de los que esta pintada la base
+                (let* ( (ultimo (car (last casilla)))
+                        ; solo es una lista de colores si el último elemento ES una lista
+                        (colores-recibidos (cond ( (listp ultimo) ultimo )
+                                                ( t nil ))) )  ; si no hay lista, no hay colores
+                    (cond ((member 'r colores-recibidos) (color 255 0 0) (quadrat_ple 3 (+ posx 4) (+ posy 4))))
+                    (cond ((member 'g colores-recibidos) (color 0 255 0) (quadrat_ple 3 (+ posx 8) (+ posy 4))))
+                    (cond ((member 'b colores-recibidos) (color 0 0 255) (quadrat_ple 3 (+ posx 12) (+ posy 4))))
+                )
+
                 ; elegimos el color del contorno de la bola 
                 (cond (  (member 'e1 casilla) (color 0 0 0)  )        
                       (  (member 'e2 casilla) (color 255 255 255)  )   

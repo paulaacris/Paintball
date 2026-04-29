@@ -17,8 +17,16 @@
 (setq bolla_visio 20)
 (setq base_visio 64)
 
-"CAMBIOS"
-"en aplicar_acciones mov ahora esta puesto que tr siempre sume 1, hacer que si es diagonal sumer 1.42"
+"TO DO"
+"EN PINTAR MIRAR SI PINTAMOS A UNA BOLA, UNA BASE O UN LABORATORIO"
+    "SI ES UNA BOLA DEJARLO IGUAL"
+    "SI ES UNA BASE MIRAR"
+    "SI ES UN LABORATORIO PONERLE A LA CASILLA EL NOMBRE DEL EQUIPO -> EN DIBUJAR SI EL LABORATORIO TIENE EQUIPO REDONDEARLO"
+
+"LÓGIBA BASE (AGENTE Y CONTROLADOR)"
+"EN DECIDIR PINTAR SOLO PINTAMOS SI NO ESTA YA PINTADA DE NUESTRO COLOR"
+"EN MOURE SI ESTA A TIRO NO NOS SEGUIMOS ACERCANDO A ELLA"
+"¿MEJORAR LÓGICA DE MOVIMIENTO?"
 
 ; ESTADO
 ; (mapa unitats pintura-e1 pintura-e2 turno)
@@ -160,8 +168,9 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
                 
                 (nuevas-unidades (car resultado-aplicar-acciones))
                 (nueva-pintura (car (cdr resultado-aplicar-acciones)))
+                (nuevo-mapa (caddr resultado-aplicar-acciones))
 
-                (nou-estat (list (nth 0 estat)
+                (nou-estat (list nuevo-mapa
                                  nuevas-unidades
                                  (cond ( (eq torn-actual 'e1) nueva-pintura ) 
                                        ( t (nth 2 estat) ))
@@ -268,7 +277,7 @@ funcion que sustituye la unidad que tiene las coordenadas (coordenadas) por bola
 
 "EJECUTA LAS ORDENES DEL AGENTE Y DEVUELVE LA LISTA DE UNIDADES ACTUALIZADA"
 (defun aplicar-acciones (accions unidades pintura mapa)
-    (cond ( (null accions) (list unidades pintura) )    ; cuando ya heyamos mirado todas las acciones devolvemos la lista de unidades (ya estaran actualizadas) y la pintura (en segun que acciones va cambiando)
+    (cond ( (null accions) (list unidades pintura mapa) )    ; cuando ya heyamos mirado todas las acciones devolvemos la lista de unidades (ya estaran actualizadas) y la pintura (en segun que acciones va cambiando)
           ( t (let* ( (accio (car accions))             ; cogemos la primera accion de la lista (mou (7 7) (7 8))
                       (tipo (car accio))                ; tipo de accion (mou)
                       (params (cdr accio))              ; ((7 7) (7 8))
@@ -309,7 +318,39 @@ funcion que sustituye la unidad que tiene las coordenadas (coordenadas) por bola
                              (<= (dist-sq (car params) (car (cdr params))) bolla_pintar) ; la distancia a la que quiere pintar esta permitida 
                              (not (member 'aigua (trobar-casella (car (cdr params)) mapa)))) ; no quiere pintar una casilla que sea agua 
                         ; SI TODO ES LEGAL 
-                        (let* ( (color-a-pintar (nth 2 bola)) ; color de la bola que dispara 
+                        (let* ( (pos-objetivo (car (cdr params)))
+                                (color-a-pintar (nth 2 bola))
+                                (casilla-objetivo (trobar-casella pos-objetivo mapa))
+                              )
+
+                                  ; SE EL OBJETIVO ES UNA BASE
+                            (cond ( (member 'base casilla-objetivo)
+                                    (let* ( ; obtenemos la lista de colores que tiene al final
+                                            ; (terra g base e1 (r g))
+                                            (colores-actuales (car (last casilla-objetivo)))
+                                            ; añadimos el nuevo color si no estaba 
+                                            (nuevos-colores (adjoin color-a-pintar colores-actuales))
+                                            ;; Creamos la nueva casilla sustituyendo la vieja lista de colores
+                                            ;; Quitamos el último elemento (lista vieja) y añadimos la nueva
+                                            (nueva-casilla (append (reverse (cdr (reverse casilla-objetivo))) 
+                                                                    (list nuevos-colores)))
+                                            ;; Actualizamos el mapa con la casilla nueva
+                                            (nuevo-mapa (actualizar-mapa pos-objetivo nueva-casilla mapa))
+                                            ;; Actualizamos el TR de la bola que dispara (nth 5)
+                                            (bola-act (list (nth 0 bola) (nth 1 bola) (nth 2 bola) 
+                                                            (nth 3 bola) (nth 4 bola) (+ (nth 5 bola) 3)))
+                                            (nueva-lista-unidades (actualizar-lista-unidades (car params) bola-act unidades))
+                                          ) 
+                                        (aplicar-acciones (cdr accions) nueva-lista-unidades pintura nuevo-mapa)
+                                    ) )
+
+                                  ; SI ES UN LAB
+                                  ( (member 'lab casilla-objetivo)
+                                    ; si es un lab en vez de añadir los colores añadimos el equipo de la bola al final
+                                    nil )
+
+                                  ; SI ES UNA BOLA  
+                                  (t (let* ( (color-a-pintar (nth 2 bola)) ; color de la bola que dispara 
                                 (colores-victima (nth 3 bola-pintar)) ; colores de los que ya esta pintada la bola a la que vamos a disparar
                                 (nuevos-colores-victima (adjoin color-a-pintar colores-victima)) ; adjoin añade un elemento a una lista si no estaba ya  
                                 ; actualizamos la bola que lanza
@@ -332,7 +373,12 @@ funcion que sustituye la unidad que tiene las coordenadas (coordenadas) por bola
                               ) 
                             ; seguimos con el resto de acciones
                             (aplicar-acciones (cdr accions) nueva-lista pintura mapa) 
-                        ) ) 
+                        ) ) )
+                            
+                            )
+
+                        )
+                        
                         
                       ; SI LA ACCION NO ES LEGAL O NO ES DEl TIPO LA IGNORAMOS
                       ( t (aplicar-acciones (cdr accions) unidades pintura mapa ) )
@@ -342,6 +388,27 @@ funcion que sustituye la unidad que tiene las coordenadas (coordenadas) por bola
           )
     )
 )
+
+"ACTUALIZA UNA COLUMNA DENTRO DE UNA FILA"
+(defun actualizar-columna (x nueva-casilla fila)
+  (cond ((null fila) nil)
+        ((= x 0) (cons nueva-casilla (cdr fila))) ;; Hemos llegado a la X, la cambiamos
+        (t (cons (car fila) 
+                 (actualizar-columna (- x 1) nueva-casilla (cdr fila)))))
+)
+
+"ACTUALIZA UNA FILA DENTRO DEL MAPA"
+(defun actualizar-mapa (pos nueva-casilla mapa)
+  (let ((x (car pos))
+        (y (cadr pos)))
+    (cond ((null mapa) nil)
+          ((= y 0) ;; Hemos llegado a la fila Y
+           (cons (actualizar-columna x nueva-casilla (car mapa)) 
+                 (cdr mapa)))
+          (t (cons (car mapa) 
+                   (actualizar-mapa (list x (- y 1)) nueva-casilla (cdr mapa))))))
+)
+
 
 (defun buscar-unidad (pos unidades)
     (cond (  (null unidades) nil  )
