@@ -97,7 +97,7 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
             (mapa-convertido (preparar-mapa mapa-fitxer))
             ; ESTADO
             ; creamos el estado inicial del juego 
-            (estat-inicial (list mapa-convertido '(((15 4) e1 r (r g b) 0 0) ((10 10) e1 r (r) 0 0) ((12 10) e2 r (r) 0 0)) 200 200 'e1))
+            (estat-inicial (list mapa-convertido '(((15 4) e1 r (r g b) 0 0) ((10 10) e1 g (g) 0 0) ((12 10) e2 r (r) 0 0)) 200 200 'e1))
           )
 
         ; dibujamos el mapa  
@@ -123,8 +123,8 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
             (torn-actual (car (cddddr estat)))  ; turno
 
             ; actualizamos los tiempos de recuperacion 
-            ;(se le resta 1 a todos los tiempos de todas las bolas)
-            (unitats (actualitzar-temps-recuperacio unitats-velles))
+            ;(se le resta 1 a todos los tiempos de las bolas del equipo de ese turno )
+            (unitats (actualitzar-temps-recuperacio unitats-velles torn-actual))
         
             ; pintura que tiene el equipo de quien es el turno 
             (pintura-base (cond ((eq torn-actual 'e1) pintura-e1)
@@ -168,7 +168,7 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
                                  (cond ( (eq torn-actual 'e2) nueva-pintura ) 
                                        ( t (nth 3 estat) ))
                                  siguiente-turno))                    
-              )
+              ) 
             
             "SI ALGUIEN HA GANADO SE TIENE QUE PARAR EL JUEGO "
 
@@ -179,8 +179,8 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
     )
 )
 
-"BAJA TODOS LOS TIEMPOS DE RECUPERACIÓN AL EMPEZAR EL TURNO"
-(defun actualitzar-temps-recuperacio (unitats)
+"BAJA TODOS LOS TIEMPOS DE RECUPERACIÓN A LAS BOLAS DEL EQUIPO"
+(defun actualitzar-temps-recuperacio (unitats torn)
     (cond ((null unitats) nil)
           (t (let* ((unitat (car unitats))
                     (pos (nth 0 unitat))
@@ -189,14 +189,19 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
                     (color-pintada (nth 3 unitat))
                     (tr-moure (nth 4 unitat))
                     (tr-pintar (nth 5 unitat))
-
-                    ; creamos una nueva bola con los tiempos restados
-                    (nueva-unidad (list pos equipo color color-pintada
-                                (max 0 (- tr-moure 1))
-                                (max 0 (- tr-pintar 1))))
                    )
-                (cons nueva-unidad (actualitzar-temps-recuperacio (cdr unitats)))
-             ))
+
+                    ; si la bola es del equipo que esta jugando ahora 
+                    (cond (  (eq torn equipo)  
+                             ; cambiamos la bola con una con los tr -1 
+                             (cons (list pos equipo color color-pintada (max 0 (- tr-moure 1)) (max 0 (- tr-pintar 1))) 
+                                   (actualitzar-temps-recuperacio (cdr unitats ) torn))  )
+                          ; si no se queda igual
+                          (  t (cons unitat 
+                                     (actualitzar-temps-recuperacio (cdr unitats) torn))  )
+                    )
+             )
+          )
     )
 )
 
@@ -254,7 +259,7 @@ funcion que sustituye la unidad que tiene las coordenadas (coordenadas) por bola
 (defun actualizar-lista-unidades (coordenadas bola unidades)
     (cond (  (null unidades) nil  )
           ; si encontramos la bola que queremos cambiar 
-          (  (eq (caar unidades) coordenadas)
+          (  (equal (caar unidades) coordenadas)
              (cons bola (cdr unidades))  )
           ; si no es esta lo dejamos igual y seguimos miranod
           (  t (cons (car unidades) (actualizar-lista-unidades coordenadas bola (cdr unidades))))
@@ -268,11 +273,16 @@ funcion que sustituye la unidad que tiene las coordenadas (coordenadas) por bola
                       (tipo (car accio))                ; tipo de accion (mou)
                       (params (cdr accio))              ; ((7 7) (7 8))
                       ; buscamos la bola (por sus coordenadas) a la que le queremos aplicar la accion
+                      ; bola que queremos mover 
                       (bola (buscar-unidad (car params) unidades)) ; unidad completa
+                      ; bola que queremos pintar
+                      ; la bola que queremos pintar es la correspondiente al segundo parametro (no al primero como la de mover)
+                      (bola-pintar (buscar-unidad (cadr params) unidades))
+
                     )
                 (cond ; -- ACCION MOU --
                       ( (and (eq tipo 'mou)                                                     ; si la accion es mover una bola
-                             (< (nth 4 bola) 1)                                                 ; si el tiempo de recuperacion es < 1
+                             (< (nth 4 bola) 1)                                                 ; si el tiempo de recuperacion de moverse es < 1
                              (<= (dist-sq (car params) (car (cdr params))) bolla_moviment)      ; la distancia a la que se quiere mover esta permitida
                              (not (member 'aigua (trobar-casella (car (cdr params)) mapa))))    ; y no se quiere mover encima de una casilla que sea agua
                         ; SI TODO ES LEGAL
@@ -283,19 +293,51 @@ funcion que sustituye la unidad que tiene las coordenadas (coordenadas) por bola
                                                         (nth 1 bola)        ; equipo
                                                         (nth 2 bola)        ; colro
                                                         (nth 3 bola)        ; colores pintada
-                                                        (+ (nth 4 bola) incremento)  ; tr_moure + 1
+                                                        (+ (nth 4 bola) incremento)  ; tr_moure + 1 / 1.42
                                                         (nth 5 bola)))      ; tr_pintar igual
                               
                                 ; sustituimos la bola vieja por la nueva
                                 (nueva-lista (actualizar-lista-unidades (car params) bola-actualizada unidades))
-                              )
+                              ) 
                             ; seguimos con el resto de acciones
                             (aplicar-acciones (cdr accions) nueva-lista pintura mapa)
-                        ))
+                        )  )
+
+                       ; -- ACCION PINTA -- 
+                      ( (and (eq tipo 'pinta) ; si la accion es pintar una bola
+                             (< (nth 5 bola) 1) ; si el tiempo de recuperacion de pintar es < 1
+                             (<= (dist-sq (car params) (car (cdr params))) bolla_pintar) ; la distancia a la que quiere pintar esta permitida 
+                             (not (member 'aigua (trobar-casella (car (cdr params)) mapa)))) ; no quiere pintar una casilla que sea agua 
+                        ; SI TODO ES LEGAL 
+                        (let* ( (color-a-pintar (nth 2 bola)) ; color de la bola que dispara 
+                                (colores-victima (nth 3 bola-pintar)) ; colores de los que ya esta pintada la bola a la que vamos a disparar
+                                (nuevos-colores-victima (adjoin color-a-pintar colores-victima)) ; adjoin añade un elemento a una lista si no estaba ya  
+                                ; actualizamos la bola que lanza
+                                (bola-actualizada (list (nth 0 bola)          ; pos igual
+                                                        (nth 1 bola)          ; equipo
+                                                        (nth 2 bola)          ; colro
+                                                        (nth 3 bola)          ; colores pintada
+                                                        (nth 4 bola)          ; tr_moure igual
+                                                        (+ (nth 5 bola) 3)))  ; tr_pintar + 3
+                                ; actualizamos la bola que recibe 
+                                (bola-actualizada2 (list (nth 0 bola-pintar)    ; pos igual
+                                                         (nth 1 bola-pintar)    ; equipo
+                                                         (nth 2 bola-pintar)    ; colro
+                                                         nuevos-colores-victima ; unico que cambia (no se como)
+                                                         (nth 4 bola-pintar)    ; tr_moure igual
+                                                         (nth 5 bola-pintar)))  ; tr_pintar + 3
+                                ; sustituimos ambas bolas en la lsita
+                                (lista-temp (actualizar-lista-unidades (car params) bola-actualizada unidades))
+                                (nueva-lista (actualizar-lista-unidades (car (cdr params)) bola-actualizada2 lista-temp))
+                              ) 
+                            ; seguimos con el resto de acciones
+                            (aplicar-acciones (cdr accions) nueva-lista pintura mapa) 
+                        ) ) 
                         
                       ; SI LA ACCION NO ES LEGAL O NO ES DEl TIPO LA IGNORAMOS
                       ( t (aplicar-acciones (cdr accions) unidades pintura mapa ) )
                 )
+                
               ) 
           )
     )
@@ -303,15 +345,15 @@ funcion que sustituye la unidad que tiene las coordenadas (coordenadas) por bola
 
 (defun buscar-unidad (pos unidades)
     (cond (  (null unidades) nil  )
-          (  (eq pos (caar unidades)) (car unidades)  )
+          (  (equal pos (caar unidades)) (car unidades)  )
           (  t (buscar-unidad pos (cdr unidades))  )
     )
 )
 
 (defun es-diagonal (pos1 pos2)
     (let ( (x1 (car pos1))
-           (x2 (car (cdr pos1)))
-           (y1 (car pos2))
+           (y1 (car (cdr pos1)))       
+           (x2 (car pos2)) 
            (y2 (car (cdr pos2)))
          )
         

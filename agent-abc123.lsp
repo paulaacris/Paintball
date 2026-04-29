@@ -23,7 +23,7 @@
 "EL AGENTE DEVUELVE UNA LISTA DE ACCIONES"
 "
   mover una bola -> (mou (de pos) (a pos))
-  hacer que una bola pinte a otra -> (pinta (esto))
+  hacer que una bola pinte a otra -> (pinta (de esto) (a esto))
   crar una bolla -> (crar-bolla color (on)) 
 "
 
