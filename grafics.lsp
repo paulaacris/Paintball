@@ -15,8 +15,6 @@
 ; color e1 -> blanco
 ; color e2 -> negro
 
-"COSAS A CAMBIAR"
-
 "EN 0 NO PINTA BIEN EL COLOR DEL SUELO SI LA BASE ESTA PINTADA DE ALGUN COLOR"
 (setq modo 1) ; 0: cada casilla de su color, 1: toda la tierra es gris
 

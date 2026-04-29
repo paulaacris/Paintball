@@ -30,12 +30,13 @@
 "LÓGICA DEL AGENTE"
 "
   BASE
-    si pintura >50 -> creamos una bola del color que menos tengamos, si todas iguales aleatorio
+    si pintura >=50 -> creamos una bola del color que menos tengamos, si todas iguales aleatorio
     si ve la base enemiga (y no hay ninguna bola ya encima) la crea lo mas cerca de la base posible (lo que deje el rango)
   
   BOLLA
-    si la bola ve la base enemiga y no esta pintada del color del que puede s¡disparar la bola
-      si estan a distanci ade tiro disparan 
+    si ve  aotra bola y esta a tiro y no esta pintada del color del que puede disparar la bola le dispara 
+    si la bola ve la base enemiga y no esta pintada del color del que puede disparar la bola
+      si estan a distanci de tiro disparan 
       si no se mueve hacia ella 
     si hay <20 de pintura 
       si puedes le disparas a un laboratorio que no sea tuyo de antes
@@ -78,8 +79,16 @@
   (let* ( (pos-actual (car mi-unidad))
           (x-actual (car pos-actual))
           (y-actual (car (cdr pos-actual)))
-          (objetivo '(0 0)) 
 
+          (meu-equip (cond ((member 'e1 mi-unidad) 'e1)
+                           (t 'e2)))
+
+          ; SELECCIONAR OBJETIVO
+          ;(objetivo '(0 0))
+          (obj (cercar-objetiu-enemic meu-equip mi-visio))
+          (objetivo (cond ( obj obj )   ; si hay objetivo vamos hacia el
+                          ( t '(10 10) )))  ; 3. Si no, va hacia el centro del mapa 
+        
           ; TRES OPCIONES DE MOVIMIENTO
           ; movemos x y 
           (pos-diag (aproxima-posicio pos-actual objetivo))
@@ -87,19 +96,35 @@
           (pos-x (list (calcular-paso x-actual (car objetivo)) y-actual))
           ; movemos solo y
           (pos-y (list x-actual (calcular-paso y-actual (car (cdr objetivo)))))
-        )
-    (cond ; si la posicion a la que nos queriamos mover es caminable 
+        ) (break "asd")
+
+    ; CONDICION DE MOVIMIENTO    
+    (cond ; PRIORIDAD 1: si podemos pintamos
+          ;(  (<= (dist-sq objetivo pos-actual) bolla_pintar) (list (list 'pintar objetivo))  )  
+          ; PRIORIDAD 2: moverse 
           (  (es-caminable pos-diag mi-visio)
-             (list (list 'mou pos-actual pos-diag))  )
-          ; si la posicion anterior no es caminable intentamos mover solo la x 
+             (list (list 'mou pos-actual pos-diag))  )  
           (  (es-caminable pos-x mi-visio)
              (list (list 'mou pos-actual pos-x))  )
-          ; si la posicion anterior no es caminable intentamos mover solo la y 
           (  (es-caminable pos-y mi-visio)
              (list (list 'mou pos-actual pos-y))  )
+          
+          ; PRIORIDAD 3: SI TODO FALLA, MOVIMIENTO ALEATORIO O ESPERAR
+          ; Esto evita que la bola se quede "muerta" si hay un obstáculo delante.
+          ( t (list (list 'mou pos-actual (list (+ x-actual 1) y-actual))))
+    ) 
+    ;(cond ; si la posicion a la que nos queriamos mover es caminable 
+     ;     (  (es-caminable pos-diag mi-visio)
+      ;       (list (list 'mou pos-actual pos-diag))  )
+          ; si la posicion anterior no es caminable intentamos mover solo la x 
+       ;   (  (es-caminable pos-x mi-visio)
+        ;     (list (list 'mou pos-actual pos-x))  )
+          ; si la posicion anterior no es caminable intentamos mover solo la y 
+         ; (  (es-caminable pos-y mi-visio)
+          ;   (list (list 'mou pos-actual pos-y))  )
     )
-  )
 )
+
 
 "CALCULA LA SIGUIENTE COORDENADA A LA QUE TIENES QUE MOVERTE PARA ACERCARTE AL OBJETIVO"
 ; la bola solo se mueve, como máximo, una casilla en direccion x y una casilla en direccion y
@@ -131,7 +156,44 @@
     (cond ( (null casilla) nil ) ; Si no la vemos no vamos
           ( (member 'aigua casilla) nil ) ; Si es agua, no podemos
           ( (member 'bolla casilla) nil ) ; Si ya hay otra bola, no podemos
+          ;"si no es base, si no es lab"
           ( t t ) ; En cualquier otro caso (tierra o base), se puede pasar
     )
+  )
+)
+
+"BUSCA UNA CASILLA POR SU CONTENIDO (base, lab, bolla)"
+(defun cercar-en-visio (objectiu visio)
+  (cond (  (null visio) nil  )
+        ; si la casilla que estamos mirando es del tipo objetivo
+        ; devolvemos las coordenadas de esa casilla 
+        (  (member 'objectiu (car visio)) (car (car visio))  )
+        ; si no pasamos a mirar las siguientes casillas 
+        (  t (cercar-en-visio objectiu (cdr visio))  )
+  )
+)
+
+"BUSCA UNA CASILLA POR SU CONTENIDO Y QUE NO SEA DE MI EQUIPO"
+;mal 
+(defun cercar-objetiu-enemic (meu-equip visio)
+  (cond ( (null visio) nil )
+        ( t 
+          (let* ( (casilla (car visio))
+                  (pos (car casilla))
+                  ; Buscamos en la lista de la casilla si está el nombre de un equipo
+                  ; que NO sea el nuestro.
+                  (es-base-enemiga (and (member 'base casilla) 
+                                        (not (member meu-equip casilla))))
+                  (es-lab-libre (and (member 'lab casilla) 
+                                     (not (member meu-equip casilla))))
+                )
+                ; asi es lo primero que encuentra 
+                ; mirar que ese cerca 
+            (cond ( es-base-enemiga pos ) ; preferencia 1 - base 
+                  ( es-lab-libre pos )    ; preferencia 2 - lab 
+                  ( t (cercar-objetiu-enemic meu-equip (cdr visio)) )
+            )
+          )
+        )
   )
 )
