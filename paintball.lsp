@@ -104,7 +104,7 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
             (mapa-convertido (preparar-mapa mapa-fitxer))
             ; ESTADO
             ; creamos el estado inicial del juego 
-            (estat-inicial (list mapa-convertido '(((15 4) e1 r (r g b) 0 0) ((18 5) e1 g (r g b) 0 0) ((19 4) e1 b (r g b) 0 0) ((10 10) e1 g (g) 0 0) ((12 10) e2 r (r) 0 0)) 200 200 'e1 1))
+            (estat-inicial (list mapa-convertido '(((15 4) e1 r (r g) 0 0) ((10 10) e1 g (g) 0 0) ((12 10) e2 r (r b) 0 0)) 200 200 'e1 1))
           )
 
         ; dibujamos el mapa  
@@ -186,8 +186,11 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
                             (nueva-pintura (car (cdr resultado-aplicar-acciones)))
                             (nuevo-mapa (caddr resultado-aplicar-acciones))
 
+                            ; eliminamos las bolas muertas
+                            (unidades-vidas (matar-bolas nuevas-unidades))
+
                             (nou-estat (list nuevo-mapa
-                                             nuevas-unidades
+                                             unidades-vidas
                                              (cond ( (eq torn-actual 'e1) nueva-pintura ) 
                                                    ( t (nth 2 estat) ))
                                              (cond ( (eq torn-actual 'e2) nueva-pintura ) 
@@ -220,6 +223,27 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
               ) 
         )
     ) 
+)
+
+"ELIMINA DE LA LISTA LAS BOLAS QUE TENGAN LOS TRES COLORES (R G B)"
+(defun matar-bolas (unitats)
+    (cond ( (null unitats) nil )
+          ( t 
+            (let* ( (bola (car unitats))
+                    (colores-pintada (nth 3 bola)) )
+                
+                ; Si NO tiene los 3 colores, la conservamos
+                (cond ( (not (and (member 'r colores-pintada)
+                                  (member 'g colores-pintada)
+                                  (member 'b colores-pintada)))
+                        (cons bola (matar-bolas (cdr unitats))) )
+                      
+                      ; Si tiene los 3 colores, la ignoramos (muere)
+                      ( t (matar-bolas (cdr unitats)) )
+                )
+            )
+          )
+    )
 )
 
 (defun guanyador (mapa)
