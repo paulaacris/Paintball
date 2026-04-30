@@ -203,7 +203,12 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
                 (format t "~%=====================================~%")
                 (format t "¡LÍMITE DE ~A RONDAS ALCANZADO!~%" max_rondas)
                 (format t "=====================================~%")
-                ; Aquí más adelante miraremos quién ha ganado contando puntuación
+                
+                ; Calculamos y anunciamos el ganador
+                (let ((ganador (determinar-guanyador unitats-velles pintura-e1 pintura-e2)))
+                    (format t "¡EL GANADOR ES EL EQUIPO ~A!~%" ganador)
+                    (format t "=====================================~%~%")
+                )
                 nil ) ; Devolvemos nil y TERMINAMOS la función aquí
               
               ; --- SI NO HA TERMINADO, JUGAMOS EL TURNO ---
@@ -271,6 +276,30 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
               ) ; Cierra la rama 't' del cond
         ) ; Cierra el cond principal
     ) ; Cierra el let* principal
+)
+
+"DETERMINA EL GANADOR POR TIEMPO SIGUIENDO LAS REGLAS"
+(defun determinar-guanyador (unitats pintura-e1 pintura-e2)
+    (let* ( ; Filtramos y contamos cuántas bolas vivas tiene cada equipo
+            (bolles-e1 (length (filtrar-bolles-equip 'e1 unitats)))
+            (bolles-e2 (length (filtrar-bolles-equip 'e2 unitats))) 
+          )
+        
+        (cond 
+            ; REGLA 1: Gana quien tiene más bolas vivas
+            ( (> bolles-e1 bolles-e2) 'e1 )
+            ( (< bolles-e1 bolles-e2) 'e2 )
+            
+            ; REGLA 2: Si hay empate de bolas, gana quien tiene más pintura
+            ( (> pintura-e1 pintura-e2) 'e1 )
+            ( (< pintura-e1 pintura-e2) 'e2 )
+            
+            ; REGLA 3: Si tienen mismas bolas y misma pintura, cara o cruz (aleatorio)
+            ; (random 2) devuelve 0 o 1
+            ( (= (random 2) 0) 'e1 )
+            ( t 'e2 )
+        )
+    )
 )
 
 "BAJA TODOS LOS TIEMPOS DE RECUPERACIÓN A LAS BOLAS DEL EQUIPO"
