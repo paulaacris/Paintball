@@ -104,7 +104,7 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
             (mapa-convertido (preparar-mapa mapa-fitxer))
             ; ESTADO
             ; creamos el estado inicial del juego 
-            (estat-inicial (list mapa-convertido '(((15 4) e1 r (r g) 0 0) ((10 10) e1 g (g) 0 0) ((12 10) e2 r (r b) 0 0)) 200 200 'e1 1))
+            (estat-inicial (list mapa-convertido '(((1 0) e1 r (r g) 0 0) ((15 4) e1 r (r g) 0 0) ((10 10) e1 g (g) 0 0) ((12 10) e2 r (r b) 0 0)) 200 200 'e1 1))
           )
 
         ; dibujamos el mapa  
@@ -475,9 +475,28 @@ funcion que sustituye la unidad que tiene las coordenadas (coordenadas) por bola
                                     ) )
 
                                   ; SI ES UN LAB
-                                  ;( (member 'lab casilla-objetivo)
+                                  ( (member 'lab casilla-objetivo)
                                     ; si es un lab en vez de añadir los colores añadimos el equipo de la bola al final
-                                   ; nil )
+                                    ; si tenia otro antes lo quitamos y ponemos el nuestro
+                                    (let*( (equipo-bola (nth 1 bola))
+                                           ; limpiamos el lab del equipo que lo tuviera antes
+                                           (casilla-limpia (remove 'e2 (remove 'e1 casilla-objetivo)))
+                                           ; añadimos el nuevo equipo conquistador al final
+                                           (nueva-casilla (append casilla-limpia (list equipo-bola)))
+
+                                           ; actualizamos el mapa
+                                           (nuevo-mapa (actualizar-mapa pos-objetivo nueva-casilla mapa))
+
+                                           ;; Actualizamos el TR de la bola que dispara (nth 5)
+                                            (bola-act (list (nth 0 bola) (nth 1 bola) (nth 2 bola) 
+                                                            (nth 3 bola) (nth 4 bola) (+ (nth 5 bola) 3)))
+                                            (nueva-lista-unidades (actualizar-lista-unidades (car params) bola-act unidades))
+                                         )
+                                        ; Seguimos procesando acciones con el mapa y la lista actualizados
+                                        (aplicar-acciones (cdr accions) nueva-lista-unidades pintura nuevo-mapa)
+                                    ) 
+                                    
+                                    )
 
                                   ; SI ES UNA BOLA  
                                   (t (let* ( (color-a-pintar (nth 2 bola)) ; color de la bola que dispara 
