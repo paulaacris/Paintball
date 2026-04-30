@@ -150,7 +150,7 @@
                                                  ( t nil ))) )  ; si no hay lista, no hay colores
                     (cond ((member 'r colores-recibidos) (color 255 0 0) (quadrat_ple 3 (+ posx 4) (+ posy 4))))
                     (cond ((member 'g colores-recibidos) (color 0 255 0) (quadrat_ple 3 (+ posx 8) (+ posy 4))))
-                    (cond ((member 'b colores-recibidos) (color 0 0 255) (quadrat_ple 3 (+ posx 12) (+ posy 4))))
+                    (cond ((member 'b colores-recibidos) (color 0 0 255) (quadrat_ple 3 (+ posx 8) (+ posy 8))))
                 )
 
                 ; elegimos el color del contorno de la bola 

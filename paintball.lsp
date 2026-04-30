@@ -20,7 +20,7 @@
 
 (setq tamaño_mapa 19)
 
-(setq max_rondas 2)
+(setq max_rondas 200)
 
 "TO DO"
 "EN aplicar accion PINTAR SI ES UN LABORATORIO PONERLE A LA CASILLA EL NOMBRE DEL EQUIPO -> EN DIBUJAR SI EL LABORATORIO TIENE EQUIPO REDONDEARLO"
@@ -104,7 +104,7 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
             (mapa-convertido (preparar-mapa mapa-fitxer))
             ; ESTADO
             ; creamos el estado inicial del juego 
-            (estat-inicial (list mapa-convertido '(((15 4) e1 r (r g b) 0 0) ((10 10) e1 g (g) 0 0) ((12 10) e2 r (r) 0 0)) 200 200 'e1 1))
+            (estat-inicial (list mapa-convertido '(((15 4) e1 r (r g b) 0 0) ((18 5) e1 g (r g b) 0 0) ((19 4) e1 b (r g b) 0 0) ((10 10) e1 g (g) 0 0) ((12 10) e2 r (r) 0 0)) 200 200 'e1 1))
           )
 
         ; dibujamos el mapa  
@@ -120,73 +120,6 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
         (juga-torn estat-inicial)
     )
 )
-
-"FUNCIÓN QUE JESTIONA EL FLUJO DE CADA TURNO"
-"(defun juga-torn (estat)
-    (let* ( (mapa (car estat))                  ; mapa
-            (unitats-velles (car (cdr estat)))  ; lista de bolas (a estas les falta actualizar tr)
-            (pintura-e1 (car (cddr estat)))     ; pintura de e1
-            (pintura-e2 (car (cdddr estat)))    ; pintura de e2
-            (torn-actual (car (cddddr estat)))  ; turno
-            (num-ronda (nth 5 estat))           ; ronda
-
-            ; actualizamos los tiempos de recuperacion 
-            ;(se le resta 1 a todos los tiempos de las bolas del equipo de ese turno )
-            (unitats (actualitzar-temps-recuperacio unitats-velles torn-actual))
-        
-            ; pintura que tiene el equipo de quien es el turno 
-            (pintura-base (cond ((eq torn-actual 'e1) pintura-e1)
-                                        (t pintura-e2)))
-            
-            ; al inicio del turno sumamos 2 de pintura al equipo +1 por laboratorio que tengan
-            (ingresos (+ 2 (comptar-laboratoris torn-actual mapa)))
-            (pintura-total (+ pintura-base ingresos))
-
-            ; necesitamos saber la posicion de la base del equipo que juega 
-            (casella-base (trobar-base torn-actual mapa))   ; casilla entera de la base
-            (pos-base (car casella-base))                   ; coordenadas (x y) de la base
-            ; y las bolas que le pertenecen 
-            (bolles-propies (filtrar-bolles-equip torn-actual unitats)) ; lista de bolas que pertenecen al equipo (((x y) e1) ((x y) e1))
-
-            ; junstamos la base y las bolas en una sola lista 
-            (totes-les-unitats (cons casella-base bolles-propies))
-
-            ; le preguntamos, a cada unidad por separado con su propia vision, lo que quiere hacer
-            (accions (demanar-accions-equip totes-les-unitats mapa pintura-total unitats))
-          ) 
-
-        (format t ""Torn de ~A. L'agente ha decidit fer: ~A~%"" torn-actual accions)
-        (format t ""ESTADO DE MIS BOLAS (pos equipo color pintura tr-moure tr-pinta):~%"")
-        (format t " "~A ~%"" bolles-propies) 
-        (format t ""Prem una tecla y Enter per aplicar accions i canviar de torn...\n"")
-        (read) ; El programa se para aquí hasta que escribas algo y pulses Enter
-
-        ; aplicamos las acciones y actualizamos el estado 
-        (let* ( (siguiente-turno (cond ((eq torn-actual 'e1) 'e2)
-                                       (t 'e1))) 
-                (resultado-aplicar-acciones (aplicar-acciones accions unitats pintura-total mapa))
-                
-                (nuevas-unidades (car resultado-aplicar-acciones))
-                (nueva-pintura (car (cdr resultado-aplicar-acciones)))
-                (nuevo-mapa (caddr resultado-aplicar-acciones))
-
-                (nou-estat (list nuevo-mapa
-                                 nuevas-unidades
-                                 (cond ( (eq torn-actual 'e1) nueva-pintura ) 
-                                       ( t (nth 2 estat) ))
-                                 (cond ( (eq torn-actual 'e2) nueva-pintura ) 
-                                       ( t (nth 3 estat) ))
-                                 siguiente-turno))                    
-              ) 
-            
-            SI ALGUIEN HA GANADO SE TIENE QUE PARAR EL JUEGO 
-
-            SI NO SEGUIMOS JUGANDO
-            (dibuixa-mapa nou-estat)    ; redibujamos el mapa para ver la accion
-            (juga-torn nou-estat)       ; recursividad
-        )
-    )
-)"
 
 "FUNCIÓN QUE GESTIONA EL FLUJO DE CADA TURNO"
 (defun juga-torn (estat)
@@ -267,15 +200,43 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
                           ) 
                         
                         "SI ALGUIEN HA GANADO SE TIENE QUE PARAR EL JUEGO "
-
-                        "SI NO SEGUIMOS JUGANDO"
-                        (dibuixa-mapa nou-estat)    ; redibujamos el mapa para ver la accion
-                        (juga-torn nou-estat)       ; recursividad
+                        (let ((ganador-base (guanyador nuevo-mapa))) ; Usamos nuevo-mapa actualizado
+                            (cond ( ganador-base  
+                                    (dibuixa-mapa nou-estat) ; Dibujamos para ver la base pintada
+                                    (format t "~%=====================================~%")
+                                    (format t "¡LA BASE HA SIDO DESTRUIDA!~%")
+                                    (format t "¡HA GANADO ~A!~%" ganador-base)
+                                    (format t "=====================================~%")
+                                    (break "") ) ; Aquí sí detiene la ejecución porque no hay nada después
+                                  
+                                  ; SI NADIE HA GANADO, SEGUIMOS JUGANDO
+                                  ( t 
+                                    (dibuixa-mapa nou-estat)    
+                                    (juga-torn nou-estat) )       
+                            )
+                        )
                     )
-                ) ; Cierra el let* secundario
-              ) ; Cierra la rama 't' del cond
-        ) ; Cierra el cond principal
-    ) ; Cierra el let* principal
+                ) 
+              ) 
+        )
+    ) 
+)
+
+(defun guanyador (mapa)
+    (let* ( (base-e1 (trobar-base 'e1 mapa))
+            (base-e2 (trobar-base 'e2 mapa))
+
+            (colores-e1 (car (last base-e1)))
+            (colores-e2 (car (last base-e2)))
+          ) 
+
+        (cond ( (and (member 'r colores-e1) (member 'b colores-e1) (member 'g colores-e1))
+                'e1)
+              ( (and (member 'r colores-e2) (member 'b colores-e2) (member 'g colores-e2))
+                'e2)
+              ( t nil)
+        )
+    )
 )
 
 "DETERMINA EL GANADOR POR TIEMPO SIGUIENDO LAS REGLAS"
