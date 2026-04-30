@@ -147,7 +147,7 @@
                 (let* ( (ultimo (car (last casilla)))
                         ; solo es una lista de colores si el último elemento ES una lista
                         (colores-recibidos (cond ( (listp ultimo) ultimo )
-                                                ( t nil ))) )  ; si no hay lista, no hay colores
+                                                 ( t nil ))) )  ; si no hay lista, no hay colores
                     (cond ((member 'r colores-recibidos) (color 255 0 0) (quadrat_ple 3 (+ posx 4) (+ posy 4))))
                     (cond ((member 'g colores-recibidos) (color 0 255 0) (quadrat_ple 3 (+ posx 8) (+ posy 4))))
                     (cond ((member 'b colores-recibidos) (color 0 0 255) (quadrat_ple 3 (+ posx 12) (+ posy 4))))
@@ -169,7 +169,18 @@
                 (move (+ posx 4) (+ posy 4))
                 (drawrel 7 7)
                 (move (+ posx 11) (+ posy 4))
-                (drawrel -7 7))
+                (drawrel -7 7)
+                
+                ; si está conquistado, dibujamos el contorno del equipo
+                (cond (  (member 'e1 casilla) (color 0 0 0)  
+                                              (quadrat_borde (- mida 4) (+ posx 2) (+ posy 2))
+                                              (quadrat_borde (- mida 2) (+ posx 1) (+ posy 1))  )        
+                      (  (member 'e2 casilla) (color 255 255 255)
+                                              (quadrat_borde (- mida 4) (+ posx 2) (+ posy 2))
+                                              (quadrat_borde (- mida 2) (+ posx 1) (+ posy 1))  )   
+                )
+                
+                )
           )
         
           (color 0 0 0) ; cambiamos a color negro 

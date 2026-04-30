@@ -24,7 +24,7 @@
 "
   mover una bola -> (mou (de pos) (a pos))
   hacer que una bola pinte a otra -> (pinta (de esto) (a esto))
-  crar una bolla -> (crar-bolla color (on)) 
+  crar una bolla -> (crar-bolla color (desde) (on)) 
 "
 
 "LÓGICA DEL AGENTE"
@@ -48,7 +48,8 @@
 (defun agent-xyz999 (mi-unidad mi-visio pintura)
   (let* ( (es-base (member 'base mi-unidad)) )
     (cond ( es-base 
-            nil)
+            ;nil)
+            (list '(crear-bolla r (1 4) (2 4))))
             ;(decidir-base mi-unidad mi-visio pintura) ) ; Si es base
           ( t 
             (decidir-bolla mi-unidad mi-visio) ) ; Si es bola
@@ -189,7 +190,7 @@
   )
 )
 
-"COMPRUEBA SI UNA CASILLA ES CAMINABLE (No es agua)"
+"COMPRUEBA SI UNA CASILLA ES CAMINABLE"
 (defun es-caminable (pos visio)
   (let ((casilla (trobar-casella-fila pos visio)))
     (cond ( (null casilla) nil ) ; Si no la vemos no vamos

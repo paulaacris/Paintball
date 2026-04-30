@@ -11,17 +11,19 @@
 ; (load 'tco)    ; https://github.com/antoni-oliver/defun-tco
 
 (setq nom_mapa "paintball/maps/bait.map")
+
 (setq bolla_moviment 2)
 (setq base_creacio 2)
 (setq bolla_pintar 5)
 (setq bolla_visio 20)
 (setq base_visio 64)
 
+(setq tamaño_mapa 19)
+
+(setq max_rondas 200)
+
 "TO DO"
-"EN PINTAR MIRAR SI PINTAMOS A UNA BOLA, UNA BASE O UN LABORATORIO"
-    "SI ES UNA BOLA DEJARLO IGUAL"
-    "SI ES UNA BASE MIRAR"
-    "SI ES UN LABORATORIO PONERLE A LA CASILLA EL NOMBRE DEL EQUIPO -> EN DIBUJAR SI EL LABORATORIO TIENE EQUIPO REDONDEARLO"
+"EN aplicar accion PINTAR SI ES UN LABORATORIO PONERLE A LA CASILLA EL NOMBRE DEL EQUIPO -> EN DIBUJAR SI EL LABORATORIO TIENE EQUIPO REDONDEARLO"
 
 "LÓGIBA BASE (AGENTE Y CONTROLADOR)"
 "EN DECIDIR PINTAR SOLO PINTAMOS SI NO ESTA YA PINTADA DE NUESTRO COLOR"
@@ -29,13 +31,10 @@
 "¿MEJORAR LÓGICA DE MOVIMIENTO?"
 
 ; ESTADO
-; (mapa unitats pintura-e1 pintura-e2 turno)
+; (mapa unitats pintura-e1 pintura-e2 turno num-ronda)
     ; unitats: todas las bolas activas del juego ((x y) equipo color (colores pintada) tr-moure tr-pintar)
     ; pintura: numero del 0 all 200
     ; torn: e1 / e2
-
-"COSAS A CAMBIAR"
-"MIRAR DE CAMBIAR TODOS LOS NTH POR ¿CDR?"
 
 " CARCAR ARCHIVOS "
 (load 'paintball/grafics)
@@ -105,7 +104,7 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
             (mapa-convertido (preparar-mapa mapa-fitxer))
             ; ESTADO
             ; creamos el estado inicial del juego 
-            (estat-inicial (list mapa-convertido '(((15 4) e1 r (r g b) 0 0) ((10 10) e1 g (g) 0 0) ((12 10) e2 r (r) 0 0)) 200 200 'e1))
+            (estat-inicial (list mapa-convertido '(((15 4) e1 r (r g b) 0 0) ((10 10) e1 g (g) 0 0) ((12 10) e2 r (r) 0 0)) 200 200 'e1 1))
           )
 
         ; dibujamos el mapa  
@@ -129,6 +128,7 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
             (pintura-e1 (car (cddr estat)))     ; pintura de e1
             (pintura-e2 (car (cdddr estat)))    ; pintura de e2
             (torn-actual (car (cddddr estat)))  ; turno
+            (num-ronda (nth 5 estat))           ; ronda
 
             ; actualizamos los tiempos de recuperacion 
             ;(se le resta 1 a todos los tiempos de las bolas del equipo de ese turno )
@@ -280,7 +280,7 @@ funcion que sustituye la unidad que tiene las coordenadas (coordenadas) por bola
     (cond ( (null accions) (list unidades pintura mapa) )    ; cuando ya heyamos mirado todas las acciones devolvemos la lista de unidades (ya estaran actualizadas) y la pintura (en segun que acciones va cambiando)
           ( t (let* ( (accio (car accions))             ; cogemos la primera accion de la lista (mou (7 7) (7 8))
                       (tipo (car accio))                ; tipo de accion (mou)
-                      (params (cdr accio))              ; ((7 7) (7 8))
+                      (params (cdr accio))              ; ((7 7) (7 8)) / en crear bola ('r (7 7) (7 8))
                       ; buscamos la bola (por sus coordenadas) a la que le queremos aplicar la accion
                       ; bola que queremos mover 
                       (bola (buscar-unidad (car params) unidades)) ; unidad completa
@@ -291,9 +291,12 @@ funcion que sustituye la unidad que tiene las coordenadas (coordenadas) por bola
                     )
                 (cond ; -- ACCION MOU --
                       ( (and (eq tipo 'mou)                                                     ; si la accion es mover una bola
+                             bola                                                               ; si bola no es nil
                              (< (nth 4 bola) 1)                                                 ; si el tiempo de recuperacion de moverse es < 1
                              (<= (dist-sq (car params) (car (cdr params))) bolla_moviment)      ; la distancia a la que se quiere mover esta permitida
-                             (not (member 'aigua (trobar-casella (car (cdr params)) mapa))))    ; y no se quiere mover encima de una casilla que sea agua
+                             (dins-mapa (car (cdr params)))
+                             (not (member 'aigua (trobar-casella (car (cdr params)) mapa)))    ; y no se quiere mover encima de una casilla que sea agua
+                             (not (buscar-unidad (car (cdr params)) unidades))) ; Comprobamos que no haya ninguna unidad en la casilla destino
                         ; SI TODO ES LEGAL
                         (let* ( (incremento (cond ( (es-diagonal (car params) (car (cdr params))) 1.42)
                                                   ( t 1)))
@@ -312,10 +315,38 @@ funcion que sustituye la unidad que tiene las coordenadas (coordenadas) por bola
                             (aplicar-acciones (cdr accions) nueva-lista pintura mapa)
                         )  )
 
+                     ; -- ACCION CREAR-BOLLA --
+                     ( (and (eq tipo 'crear-bolla)                                      ; si la accion es crear una bola
+                            (>= pintura 50)                                             ; si pintura >= 50
+                            (<= (dist-sq (nth 1 params) (nth 2 params)) base_creacio)   ; si la distancia a la que quiere crear la bola esta permitida
+                            (dins-mapa (nth 2 params))
+                            (not (member 'aigua (trobar-casella (nth 2 params) mapa))) ; y no quiere crear una bola encima de agua
+                            (not (buscar-unidad (car (cdr params)) unidades)))
+                        ; SI TODO ES LEGAL 
+                        (let* ( (color-bola (nth 0 params))
+                                (pos-bola (nth 2 params))
+                                (casilla-base (trobar-casella (nth 1 params) mapa)) ; buscamos la casilla de la base para sacar el equipo
+                                (equipo (nth 4 casilla-base)) ; ((x y) terra g base e1)
+
+                                ; creamos la nueva bola siguiendo la estructura ((x y) equipo color (colores pintada) tr-moure tr-pintar)
+                                (nueva-bola (list pos-bola equipo color-bola (list color-bola) 0 0))
+
+                                ; añadimos la bola nueva a la lista de unidades inicial
+                                (nuevas-unidades (cons nueva-bola unidades))
+                                ; restamos el coste de la pintura
+                                (nueva-pintura (- pintura 50))
+                              ) ;(break "jascb")
+                            ; seguimos con el resto de acciones con la lista y la pintura actualizadas 
+                            (aplicar-acciones (cdr accions) nuevas-unidades nueva-pintura mapa)
+                        ) 
+                     )
+
                        ; -- ACCION PINTA -- 
                       ( (and (eq tipo 'pinta) ; si la accion es pintar una bola
+                             bola ; si bola no es nil
                              (< (nth 5 bola) 1) ; si el tiempo de recuperacion de pintar es < 1
                              (<= (dist-sq (car params) (car (cdr params))) bolla_pintar) ; la distancia a la que quiere pintar esta permitida 
+                             (dins-mapa (car (cdr params)))
                              (not (member 'aigua (trobar-casella (car (cdr params)) mapa)))) ; no quiere pintar una casilla que sea agua 
                         ; SI TODO ES LEGAL 
                         (let* ( (pos-objetivo (car (cdr params)))
@@ -345,9 +376,9 @@ funcion que sustituye la unidad que tiene las coordenadas (coordenadas) por bola
                                     ) )
 
                                   ; SI ES UN LAB
-                                  ( (member 'lab casilla-objetivo)
+                                  ;( (member 'lab casilla-objetivo)
                                     ; si es un lab en vez de añadir los colores añadimos el equipo de la bola al final
-                                    nil )
+                                   ; nil )
 
                                   ; SI ES UNA BOLA  
                                   (t (let* ( (color-a-pintar (nth 2 bola)) ; color de la bola que dispara 
@@ -450,6 +481,17 @@ funcion que sustituye la unidad que tiene las coordenadas (coordenadas) por bola
           (  (equal coordenadas (caar fila)) (car fila)  )
           ; si no miramos la siguiente casilla de la fila
           (  t (trobar-casella-fila coordenadas (cdr fila))  )
+    )
+)
+
+"COMPRUEBA SI UNA POSICION ESTA DENTRO DEL MAPA"
+(defun dins-mapa (pos)
+    (let ( (x (car pos))
+           (y (cadr pos)) )
+        (and (>= x 0)
+             (<= x tamaño_mapa)
+             (>= y 0)
+             (<= y tamaño_mapa))
     )
 )
 
