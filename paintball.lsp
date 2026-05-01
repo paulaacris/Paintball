@@ -20,7 +20,7 @@
 
 (setq tamaño_mapa 19)
 
-(setq max_rondas 200)
+(setq max_rondas 100)
 
 "TO DO"
 "EN aplicar accion PINTAR SI ES UN LABORATORIO PONERLE A LA CASILLA EL NOMBRE DEL EQUIPO -> EN DIBUJAR SI EL LABORATORIO TIENE EQUIPO REDONDEARLO"
@@ -38,6 +38,7 @@
 
 " CARCAR ARCHIVOS "
 (load 'paintball/grafics)
+(load 'paintball/agent-xyz999)
 (load 'paintball/agent-abc123)
 
 "====================================================================="
@@ -104,7 +105,7 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
             (mapa-convertido (preparar-mapa mapa-fitxer))
             ; ESTADO
             ; creamos el estado inicial del juego 
-            (estat-inicial (list mapa-convertido '(((1 0) e1 r (r g) 0 0) ((15 4) e1 r (r g) 0 0) ((10 10) e1 g (g) 0 0) ((12 10) e2 r (r b) 0 0)) 200 200 'e1 1))
+            (estat-inicial (list mapa-convertido '() 200 200 'e1 1))
           )
 
         ; dibujamos el mapa  
@@ -139,7 +140,10 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
                 
                 ; Calculamos y anunciamos el ganador
                 (let ((ganador (determinar-guanyador unitats-velles pintura-e1 pintura-e2)))
-                    (format t "¡EL GANADOR ES EL EQUIPO ~A!~%" ganador)
+                    (format t "¡EL GANADOR ES EL EQUIPO ~A! - (~A)~%" 
+                            ganador 
+                            (cond ((eq ganador 'e1) "Negro")
+                                  (t "Blanco")))
                     (format t "=====================================~%~%")
                 )
                 nil ) ; Devolvemos nil y TERMINAMOS la función aquí
@@ -168,7 +172,7 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
                         (totes-les-unitats (cons casella-base bolles-propies))
 
                         ; le preguntamos, a cada unidad por separado con su propia vision, lo que quiere hacer
-                        (accions (demanar-accions-equip totes-les-unitats mapa pintura-total unitats))
+                        (accions (demanar-accions-equip totes-les-unitats mapa pintura-total unitats num-ronda))
                       ) 
 
                     (format t "Ronda: ~A | Torn de ~A. L'agente ha decidit fer: ~A~%" num-ronda torn-actual accions)
@@ -208,7 +212,13 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
                                     (dibuixa-mapa nou-estat) ; Dibujamos para ver la base pintada
                                     (format t "~%=====================================~%")
                                     (format t "¡LA BASE HA SIDO DESTRUIDA!~%")
-                                    (format t "¡HA GANADO ~A!~%" ganador-base)
+                                    
+                                    ; Añadimos el color dependiendo del equipo ganador
+                                    (format t "¡HA GANADO ~A! - (~A)~%" 
+                                            ganador-base 
+                                            (cond ((eq ganador-base 'e1) "Negro")
+                                                  (t "Blanco")))
+                                                  
                                     (format t "=====================================~%")
                                     (break "") ) ; Aquí sí detiene la ejecución porque no hay nada después
                                   
@@ -255,9 +265,9 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
           ) 
 
         (cond ( (and (member 'r colores-e1) (member 'b colores-e1) (member 'g colores-e1))
-                'e1)
-              ( (and (member 'r colores-e2) (member 'b colores-e2) (member 'g colores-e2))
                 'e2)
+              ( (and (member 'r colores-e2) (member 'b colores-e2) (member 'g colores-e2))
+                'e1)
               ( t nil)
         )
     )
@@ -318,7 +328,7 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
 "====================================================================="
 
 "PIDE ACCIONES A CADA UNIDAD DE LA LISTA Y LAS JUNTA EN UNA UNICA LISTA"
-(defun demanar-accions-equip (unitats-equip mapa pintura unitats-globals)
+(defun demanar-accions-equip (unitats-equip mapa pintura unitats-globals num-ronda)
     (cond (  (null unitats-equip) nil  )
           (  t 
                 (let* ( (unidad-actual (car unitats-equip))
@@ -333,13 +343,29 @@ Y, SI ES UNA BASE, LE AÑADE UNA LISTA VACÍA AL FINAL PARA FUTUROS COLORES PINT
                         (visio-bruta (visio-mapa posicion rango-vision mapa))
                         (visio-neta (insertar-bolles-en-visio visio-bruta unitats-globals))
 
-                        ; llamamos al agente diciendole quien es, que ve y cuanta pintura tiene
-                        (accions-unidad (agent-xyz999 unidad-actual visio-neta pintura))
+                        ; --- CONSTRUIMOS LA LISTA OFICIAL UIB PARA EL AGENTE ---
+                        ; Extraemos los datos dependiendo de si miramos la casilla de la base o una bola
+                        (equip (cond (es-base (nth 4 unidad-actual)) (t (nth 1 unidad-actual)))) 
+                        (id-unitat 0) ; Tu controlador no usa IDs, ponemos 0
+                        (tipus-unitat (cond (es-base 'base) (t 'bolla)))
+                        (colors-pintat (cond (es-base (car (last unidad-actual))) (t (nth 3 unidad-actual))))
+                        (color-propi (cond (es-base nil) (t (nth 2 unidad-actual))))
+                        (tr-moure (cond (es-base nil) (t (nth 4 unidad-actual))))
+                        (tr-pintar (cond (es-base nil) (t (nth 5 unidad-actual))))
+                        
+                        ; (ronda equip pintura id-unitat tipus-unitat coordenada colors-pintat color-propi tr-pintar tr-moure visió memòria-compartida)
+                        (info-agent (list num-ronda equip pintura id-unitat tipus-unitat posicion colors-pintat color-propi tr-pintar tr-moure visio-neta nil))
+
+                        ; llamamos al agente correspondiente dependiendo de a qué equipo pertenece la unidad
+                        ; si e1 llamamos a agent-xyz999
+                        ; si e1 llamamos a agent-abc123
+                        (accions-unidad (cond ( (eq equip 'e1) (agent-xyz999 info-agent) )
+                                              ( (eq equip 'e2) (agent-abc123 info-agent) )))
                       )
                     
                     ; juntamos las acciones de esta unidad con las que devuelvan las demas 
                     (append accions-unidad
-                            (demanar-accions-equip (cdr unitats-equip) mapa pintura unitats-globals)) ; aplicar de una en una no todas a la vez 
+                            (demanar-accions-equip (cdr unitats-equip) mapa pintura unitats-globals num-ronda)) 
                 )  )
     )
 )
