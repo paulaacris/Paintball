@@ -1,11 +1,16 @@
 ;; =====================================================================
 ;; Pràctica final de Llenguatges de Programació.
 ;; LISP - Paintball.
+;; Data: 03/05/2025.
 ;; Estudiants: Paula Cristina Morro Negre, Matilde Navarro Robles.
 ;; Professor: Miquel Cabot.
+;; Grupo: 101
 ;; Lliurament: primera convocatòria.
 ;; Fitxer del controlador principal.
 ;; =====================================================================
+
+;; Per iniciar una partida: (load 'paintball.lsp) y (inici)
+
 
 " CARCAR ARCHIVOS "
 (load 'paintball/grafics)
@@ -37,7 +42,7 @@
 (defun carregar-dades-mapa (nom-fitxer)
   (let* ((f (open nom-fitxer))  ; abrimos el fichero 
          (mapa (read f)))       ; leemos el fichero 
-        (close f)               ; cerranis el fichero
+        (close f)               ; carramos el fichero
     mapa)                       ; devolvemos lo que hemos leido del fichero 
 )
 
@@ -256,7 +261,7 @@
 
 "EJECUTA LAS ORDENES DEL AGENTE Y DEVUELVE LA LISTA DE UNIDADES ACTUALIZADA"
 (defun aplicar-acciones (accions unidades pintura mapa)
-    (cond ( (null accions) (list unidades pintura mapa) )   ; cuando ya heyamos mirado todas las acciones devolvemos la lista de unidades (ya estaran actualizadas) y la pintura (en segun que acciones va cambiando)
+    (cond ( (null accions) (list unidades pintura mapa) )   ; cuando ya hayamos mirado todas las acciones devolvemos la lista de unidades (ya estaran actualizadas) y la pintura (en segun que acciones va cambiando)
           ( t (let* ( (accio (car accions))                 ; cogemos la primera accion de la lista (mou (7 7) (7 8))
                       (tipo (car accio))                    ; tipo de accion (mou)
                       (params (cdr accio))                  ; ((7 7) (7 8)) / en crear bola ('r (7 7) (7 8))
@@ -282,7 +287,7 @@
                                 ; actualizamos la bola con 
                                 (bola-actualizada (list (cadr params)               ; nueva pos
                                                         (nth 1 bola)                ; equipo
-                                                        (nth 2 bola)                ; colro
+                                                        (nth 2 bola)                ; color
                                                         (nth 3 bola)                ; colores pintada
                                                         (+ (nth 4 bola) incremento) ; tr_moure + 1 / 1.42
                                                         (nth 5 bola)))              ; tr_pintar igual
@@ -393,10 +398,10 @@
                                              (bola-actualizada2 (list (nth 0 bola-pintar)    ; pos igual
                                                                       (nth 1 bola-pintar)    ; equipo
                                                                       (nth 2 bola-pintar)    ; colro
-                                                                      nuevos-colores-victima ; unico que cambia (no se como)
+                                                                      nuevos-colores-victima ; unico que cambia
                                                                       (nth 4 bola-pintar)    ; tr_moure igual
                                                                       (nth 5 bola-pintar)))  ; tr_pintar + 3
-                                             ; sustituimos ambas bolas en la lsita
+                                             ; sustituimos ambas bolas en la lista
                                              (lista-temp (actualizar-lista-unidades (car params) bola-actualizada unidades))
                                              (nueva-lista (actualizar-lista-unidades (car (cdr params)) bola-actualizada2 lista-temp))
                                            ) 
@@ -612,7 +617,7 @@
     (cond (  (null unitats) nil  )
           ; si la bola es del equipo
           (  (eq equip (car (cdr (car unitats)))) 
-             ; la conservamso y seguimos mirando el resto de bolas
+             ; la conservamos y seguimos mirando el resto de bolas
              (cons (car unitats) (filtrar-bolles-equip equip (cdr unitats)))  )
           ; si no, la descartamos y miramos el resto de bolas
           (  t (filtrar-bolles-equip equip (cdr unitats))  )
@@ -661,7 +666,7 @@
           ; miramos que distancia hay entre las coordenadas de la primera casilla (caar) y la posición
           ; si es menor está en rango
           (  (<= (dist-sq pos (caar fila)) rang)
-             ; si esta en rango conservamso esa casilla y seguimos mirando 
+             ; si esta en rango conservamos esa casilla y seguimos mirando 
              (cons (car fila) (visio-fila pos rang (cdr fila))) )
           ; si no no la conservamos y seguimos mirando 
           (  t (visio-fila pos rang (cdr fila))  )
