@@ -1,33 +1,40 @@
+;; =====================================================================
 ;; Pràctica final de Llenguatges de Programació.
 ;; LISP - Paintball.
-;; Estudiants: ABC, XYZ.
-;; Professor: XXX.
+;; Estudiants: Paula Cristina Morro Negre, Matilde Navarro Robles.
+;; Professor: Miquel Cabot.
 ;; Lliurament: primera convocatòria.
 ;; Fitxer del mòdul gràfic.
-;; <Descripció de les funcions d'aquest fitxer>
+;; =====================================================================
 
-;;; =====================================================================
-;;; MÓDULO GRÁFICO - DIBUJO DEL MAPA
-;;; =====================================================================
+"====================================================================="
+" VARIABLES "
+"====================================================================="
 
 (setq mida 15) ; medida de cada casilla
+(setq modo 1) ; 0: cada casilla de su color, 1: toda la tierra es gris
 
 ; color e1 -> blanco
 ; color e2 -> negro
 
-"EN 0 NO PINTA BIEN EL COLOR DEL SUELO SI LA BASE ESTA PINTADA DE ALGUN COLOR"
-(setq modo 1) ; 0: cada casilla de su color, 1: toda la tierra es gris
-
-"ELIGE EL COLOR DE LA BINTURA/BOLA"
+"DEVUELVE EL COLOR DE PANTALLA ASOCIADO A UN IDENTIFICADOR DE PINTURA"
 (defun aplicar-color (c)
-  (cond ( (eq c 'r) (color 222 98 98) )   ; rojo
-        ( (eq c 'g) (color 145 213 109) ) ; verde
-        ( (eq c 'b) (color 12 177 199) )  ; azul
-        ( t (color 0 0 0) )               ; negro por defecto
-  )
+    (cond ( (eq c 'r) (color 222 98 98) )           ; rojo
+          ( (eq c 'g) (color 145 213 109) )         ; verde
+          ( (eq c 'b) (color 12 177 199) )          ; azul
+          ( (eq c 'agua) (color 28 0 122) )         ; agua
+          ( (eq c 'tierra) (color 208 208 208) )    ; gris
+          ( (eq c 'e1) (color 0 0 0) )              ; negro
+          ( (eq c 'e2) (color 255 255 255) )        ; blanco
+          ( t (color 0 0 0) )                       ; negro por defecto
+    )
 )
 
-"DIBUJA TODO EL MAPA"
+"====================================================================="
+" DIBUJO DEL MAPA PRINCIPAL "
+"====================================================================="
+
+"LIMPIA LA PANTALLA Y EMPIEZA EL DIBUJO DEL MAPA COMPLETO"
 (defun dibuixa-mapa (estat)
     (let ( (mapa (car estat))
            (unitats (car (cdr estat)))
@@ -39,6 +46,105 @@
     ) 
 ) 
 
+;; =====================================================================
+;; DIBUJO DE LA BASE DEL MAPA
+;; =====================================================================
+
+"RECORRE EL MAPA Y LLAMA AL DIBUJADO COLUMNA POR COLUMNA"
+(defun dibuixa-files (mapa &optional (x 0))
+    (cond (  (null mapa) t  )                        ; Si no hay más filas, termina
+          (  t (dibuixa-columnes (car mapa) 0 x)     ; Dibuja las columnas de la fila x empezando en 0
+               (dibuixa-files (cdr mapa) (+ x 1)))   ; pasamos a la Siguiente fila (x+1)
+    )
+)
+
+"RECORRE LAS COLUMNAS DE UNA FILA Y DIBUJA CADA CASILLA INDIVIDUAL"
+(defun dibuixa-columnes (columna y x)
+    (cond (  (null columna) t  )                               ; Si la columna termina, vuelve atrás
+          (  t (dibuixa-una-casella (car columna) y x)         ; Pinta la casilla actual actual
+               (dibuixa-columnes (cdr columna) (+ y 1) x)  )   ; Siguiente columna (y+1)
+    )
+)
+
+"PINTA UNA CASILLA DEL TABLERO (segun su color o no dependiendo del modo) Y EL LABORATORIO O LA BASE SI HAY"
+(defun dibuixa-una-casella (casilla x y)   
+    (let* (  (posx (* x mida))      ; posicion del cuadrado
+             (posy (* y mida))  ) 
+    
+          ; DIBUJAR EL SUELO 
+          (cond ((= modo 0)
+                    ;; Decidimos el color de relleno
+                    (cond (  (member 'r casilla) (aplicar-color 'r)  )    
+                          (  (member 'g casilla) (aplicar-color 'g)  )  
+                          (  (member 'b casilla) (aplicar-color 'b)  )  
+                          (  (member 'aigua casilla) (aplicar-color 'agua)  ) 
+                          (  t (aplicar-color 'tierra)  )                    
+                    )
+                )
+                ((= modo 1)
+                    (cond (  (member 'aigua casilla) (aplicar-color 'agua)  )
+                          (  t (aplicar-color 'tierra)  )
+                    )
+                )
+          )
+
+          (quadrat_ple mida posx posy) ; dibujamos la casilla de suelo
+          (color 0 0 0) ; cambiamos a color negro 
+
+          ; DIBUJAR LABORATORIOS Y BASES POR ENCIMA DEL SUELO 
+          (cond 
+            ;; -- BASE (Dibuixem una quadrat negre) -- 
+            (  (member 'base casilla)
+                (quadrat_ple mida posx posy)
+
+                ; dibujar los colores de los que esta pintada la base
+                (let* ( (ultimo (car (last casilla)))
+                        ; solo es una lista de colores si el último elemento ES una lista
+                        (colores-recibidos (cond ( (listp ultimo) ultimo )
+                                                 ( t nil ))) )  ; si no hay lista, no hay colores
+                    (cond (  (member 'r colores-recibidos) (aplicar-color 'r) (quadrat_ple 3 (+ posx 4) (+ posy 4)))  )
+                    (cond (  (member 'g colores-recibidos) (aplicar-color 'g) (quadrat_ple 3 (+ posx 8) (+ posy 4)))  )
+                    (cond (  (member 'b colores-recibidos) (aplicar-color 'b) (quadrat_ple 3 (+ posx 8) (+ posy 8)))  )
+                )
+
+                ; elegimos el color del contorno de la bola 
+                (cond (  (member 'e1 casilla) (aplicar-color 'e1)  )        
+                      (  (member 'e2 casilla) (aplicar-color 'e2)  )   
+                )
+
+                ; dibujamos el contorno de la base para saber de que equipo es 
+                (quadrat_borde (- mida 4) (+ posx 2) (+ posy 2))
+                (quadrat_borde (- mida 2) (+ posx 1) (+ posy 1))
+            
+            )
+            
+            ;; -- LABORATORI (Dibuixem una X) --
+            ((member 'lab casilla)
+                (move (+ posx 4) (+ posy 4))
+                (drawrel 7 7)
+                (move (+ posx 11) (+ posy 4))
+                (drawrel -7 7)
+                
+                ; si está conquistado, dibujamos el contorno del equipo
+                (cond (  (member 'e1 casilla) (aplicar-color 'e1) 
+                                              (quadrat_borde (- mida 4) (+ posx 2) (+ posy 2))
+                                              (quadrat_borde (- mida 2) (+ posx 1) (+ posy 1))  )        
+                      (  (member 'e2 casilla) (aplicar-color 'e2)
+                                              (quadrat_borde (- mida 4) (+ posx 2) (+ posy 2))
+                                              (quadrat_borde (- mida 2) (+ posx 1) (+ posy 1))  )   
+                )
+                
+                )
+          )
+        
+        (color 0 0 0) ; cambiamos a color negro 
+    )
+)   
+
+;; =====================================================================
+;; DIBUJO DE LAS BOLAS
+;; =====================================================================
+
 "RECORRE LA LISTA DE UNIDADES Y LAS PINTA"
 (defun dibuixa-bolles (unitats)
     (cond (  (null unitats) t  )
@@ -47,10 +153,9 @@
     )
 )
 
-"PINTA UN CIRCULO PARA LA BOLA"
+"PINTA UNA BOLA ESPECÍFICA CON SU COLOR, CONTORNO Y MANCHAS"
 (defun dibuixa-una-bolla (unitat)
-    (let* ( ; sacamos los datos que necesitamos de la unidad 
-            (pos (car unitat))
+    (let* ( (pos (car unitat))
             (color-bola (nth 2 unitat))
             (torn (nth 1 unitat))
             (colores-pintada (nth 3 unitat))
@@ -71,8 +176,8 @@
         (dibuixa-manxes colores-pintada centro-x centro-y radio)
 
         ; elegimos el color del contorno de la bola 
-        (cond (  (eq torn 'e1) (color 0 0 0)  )        
-              (  (eq torn 'e2) (color 255 255 255)  ) 
+        (cond (  (eq torn 'e1) (aplicar-color 'e1)  )        
+              (  (eq torn 'e2) (aplicar-color 'e2)  ) 
         )
 
         ; dibujamos el contorno de la bola para saber de que equipo es 
@@ -85,110 +190,18 @@
 
 "PINTA CIRCULOS CONCENTRICOS PARA LAS MANCHAS DE PINTURA"
 (defun dibuixa-manxes (llista-colors x y radi)
-  (cond ( (null llista-colors) t ) ; Si no hay más colores, terminamos
-        ( (<= radi 0) t )          ; Si el radio es 0 o menos, no cabe nada más
-        ( t 
-          (aplicar-color (car llista-colors))    ; Ponemos el color actual
-          (cercle-ple x y radi 20)               ; Dibujamos el círculo
-          ; Llamada recursiva con el siguiente color y un radio más pequeño
-          (dibuixa-manxes (cdr llista-colors) x y (- radi 2)) 
-        )
-  )
-)
-
-"RECORRE LAS FILAS PARA DIBUJAR CADA CASILLA"
-(defun dibuixa-files (mapa &optional (x 0))
-    (cond (  (null mapa) t  )                        ; Si no hay más filas, termina
-          (  t (dibuixa-columnes (car mapa) 0 x)     ; Dibuja las columnas de la fila x empezando en 0
-               (dibuixa-files (cdr mapa) (+ x 1)))   ; pasamos a la Siguiente fila (x+1)
+    (cond ( (null llista-colors) t ) ; Si no hay más colores, terminamos
+          ( (<= radi 0) t )          ; Si el radio es 0 o menos, no cabe nada más
+          ( t 
+            (aplicar-color (car llista-colors))    ; Ponemos el color actual
+            (cercle-ple x y radi 20)               ; Dibujamos el círculo
+            ; Llamada recursiva con el siguiente color y un radio más pequeño
+            (dibuixa-manxes (cdr llista-colors) x y (- radi 2)) )
     )
-)
-
-"RECORRE LAS COLUMNAS PARA DIBUJAR CADA CASILLA"
-(defun dibuixa-columnes (columna y x)
-    (cond (  (null columna) t  )                               ; Si la columna termina, vuelve atrás
-          (  t (dibuixa-una-casella (car columna) y x)         ; Pinta la casilla actual actual
-               (dibuixa-columnes (cdr columna) (+ y 1) x)  )   ; Siguiente columna (y+1)
-    )
-)
-
-"PINTA UNA CASILLA DEL TABLERO (segun su color o no dependiendo del modo) Y EL LABORATORIO O LA BASE SI HAY"
-(defun dibuixa-una-casella (casilla x y)   
-    (let* (  (posx (* x mida))      ; posicion del cuadrado
-             (posy (* y mida))  ) 
-    
-          ; DIBUJAR EL SUELO 
-          (cond ((= modo 0)
-                    ;; Decidimos el color de relleno
-                    (cond (  (member 'r casilla) (color 222 98 98)  )     ; Rojo
-                          (  (member 'g casilla) (color 145 213 109)  )   ; Verde
-                          (  (member 'b casilla) (color 12 177 199)  )    ; Azul
-                          (  (member 'aigua casilla) (color 28 0 122)  )  ; Negro (Agua)
-                          (  t (color 208 208 208)  )                     ; Gris (Tierra vacía)
-                    )
-                )
-                ((= modo 1)
-                    (cond (  (member 'aigua casilla) (color 28 0 122)  )
-                          (  t (color 208 208 208)  )
-                    )
-                )
-          )
-
-          (quadrat_ple mida posx posy) ; dibujamos la casilla de suelo
-          (color 0 0 0) ; cambiamos a color negro 
-
-          ; DIBUJAR LABORATORIOS Y BASES POR ENCIMA DEL SUELO 
-          (cond 
-            ;; SI ÉS UNA BASE: Dibuixem una quadrat negre 
-            ((member 'base casilla)
-                (quadrat_ple mida posx posy)
-
-                ; dibujar los colores de los que esta pintada la base
-                (let* ( (ultimo (car (last casilla)))
-                        ; solo es una lista de colores si el último elemento ES una lista
-                        (colores-recibidos (cond ( (listp ultimo) ultimo )
-                                                 ( t nil ))) )  ; si no hay lista, no hay colores
-                    (cond ((member 'r colores-recibidos) (color 255 0 0) (quadrat_ple 3 (+ posx 4) (+ posy 4))))
-                    (cond ((member 'g colores-recibidos) (color 0 255 0) (quadrat_ple 3 (+ posx 8) (+ posy 4))))
-                    (cond ((member 'b colores-recibidos) (color 0 0 255) (quadrat_ple 3 (+ posx 8) (+ posy 8))))
-                )
-
-                ; elegimos el color del contorno de la bola 
-                (cond (  (member 'e1 casilla) (color 0 0 0)  )        
-                      (  (member 'e2 casilla) (color 255 255 255)  )   
-                )
-
-                ; dibujamos el contorno de la base para saber de que equipo es 
-                (quadrat_borde (- mida 4) (+ posx 2) (+ posy 2))
-                (quadrat_borde (- mida 2) (+ posx 1) (+ posy 1))
-            
-            )
-            
-            ;; SI ÉS UN LABORATORI: Dibuixem una X
-            ((member 'lab casilla)
-                (move (+ posx 4) (+ posy 4))
-                (drawrel 7 7)
-                (move (+ posx 11) (+ posy 4))
-                (drawrel -7 7)
-                
-                ; si está conquistado, dibujamos el contorno del equipo
-                (cond (  (member 'e1 casilla) (color 0 0 0)  
-                                              (quadrat_borde (- mida 4) (+ posx 2) (+ posy 2))
-                                              (quadrat_borde (- mida 2) (+ posx 1) (+ posy 1))  )        
-                      (  (member 'e2 casilla) (color 255 255 255)
-                                              (quadrat_borde (- mida 4) (+ posx 2) (+ posy 2))
-                                              (quadrat_borde (- mida 2) (+ posx 1) (+ posy 1))  )   
-                )
-                
-                )
-          )
-        
-          (color 0 0 0) ; cambiamos a color negro 
-    )
-)    
+) 
 
 "====================================================================="
-" DIBUJO DE FORMAS "
+" DIBUJO DE FORMAS BÁSICAS "
 "====================================================================="
 
 "DIBUJA UN CUADRADO RELLENO"
