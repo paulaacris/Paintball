@@ -1,6 +1,7 @@
 ;; =====================================================================
 ;; Pràctica final de Llenguatges de Programació.
 ;; LISP - Paintball.
+;; Data: 03/05/2025.
 ;; Estudiants: Paula Cristina Morro Negre, Matilde Navarro Robles.
 ;; Professor: Miquel Cabot.
 ;; Lliurament: primera convocatòria.
@@ -165,7 +166,7 @@
             ; calculamos la posición a pintar en la pantalla 
             (centro-x (+ (* (car pos) mida) mitat))
             ; la y tiene que estar invertida para que no si dibuje abajo si va arriba
-            (centro-y (+ (* (- 19 (cadr pos)) mida) mitat))
+            (centro-y (+ (* (- tamaño_mapa (cadr pos)) mida) mitat))
             (radio 6)  ; Un radio de 6 queda bien dentro de una casilla de 15
           )
         
