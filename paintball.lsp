@@ -420,7 +420,7 @@ funcion que sustituye la unidad que tiene las coordenadas (coordenadas) por bola
                             (<= (dist-sq (nth 1 params) (nth 2 params)) base_creacio)   ; si la distancia a la que quiere crear la bola esta permitida
                             (dins-mapa (nth 2 params))
                             (not (member 'aigua (trobar-casella (nth 2 params) mapa))) ; y no quiere crear una bola encima de agua
-                            (not (buscar-unidad (car (cdr params)) unidades)))
+                            (not (buscar-unidad (nth 2 params) unidades)))
                         ; SI TODO ES LEGAL 
                         (let* ( (color-bola (nth 0 params))
                                 (pos-bola (nth 2 params))
