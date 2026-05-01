@@ -1,6 +1,7 @@
 ;; =====================================================================
 ;; Pràctica final de Llenguatges de Programació.
 ;; LISP - Paintball.
+;; Data: 03/05/2025.
 ;; Estudiants: Paula Cristina Morro Negre, Matilde Navarro Robles.
 ;; Professor: Miquel Cabot.
 ;; Lliurament: primera convocatòria.
@@ -361,13 +362,6 @@
           ( t t )                         ; en cualquier otro caso se puede pasar
     )
   )
-)
-
-"BUSCA POR PRIORIDAD: 1. Base, 2. Lab, 3. Bolla"
-(defun cercar-objetiu-enemic (meu-equip color-bola visio)
-  (or (cercar-element-enemic 'base  meu-equip color-bola visio)
-      (cercar-element-enemic 'lab   meu-equip color-bola visio)
-      (cercar-element-enemic 'bolla meu-equip color-bola visio))
 )
 
 "BUSCA UN ELEMENTO ESPECÍFICO EN LA VISIÓN QUE NO SEA DE MI EQUIPO"
