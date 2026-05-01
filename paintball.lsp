@@ -20,7 +20,7 @@
 
 (setq tamaño_mapa 19)
 
-(setq max_rondas 100)
+(setq max_rondas 1500)
 
 "TO DO"
 "EN aplicar accion PINTAR SI ES UN LABORATORIO PONERLE A LA CASILLA EL NOMBRE DEL EQUIPO -> EN DIBUJAR SI EL LABORATORIO TIENE EQUIPO REDONDEARLO"
